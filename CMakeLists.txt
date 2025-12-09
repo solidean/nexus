@@ -12,7 +12,11 @@ endif()
 
 # Define the library and its sources
 add_library(nexus
-    src/nexus/dummy.cc
+    src/nexus/check.cc
+    src/nexus/config.cc
+    src/nexus/run.cc
+    src/nexus/test.cc
+    src/nexus/test_example.cc
 )
 
 # Public headers live co-located in src/ for better editor experience.
@@ -23,7 +27,10 @@ target_sources(nexus
     TYPE HEADERS
     BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src"
     FILES
-    src/nexus/dummy.hh
+    src/nexus/check.hh
+    src/nexus/config.hh
+    src/nexus/run.hh
+    src/nexus/test.hh
     src/nexus/fwd.hh
 )
 
@@ -39,4 +46,9 @@ target_compile_features(nexus
 target_include_directories(nexus
     PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+
+target_link_libraries(nexus
+    PUBLIC
+    clean-core
 )
