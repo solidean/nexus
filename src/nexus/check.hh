@@ -1,6 +1,5 @@
 #pragma once
 
-#include <concepts>
 #include <source_location>
 #include <type_traits>
 
@@ -156,6 +155,15 @@ check_handle make_check_handle(check_kind kind, char const* expr_text, binary_ex
     return check_handle::make(kind, expr_text, expr.passed, loc) //
         .dump("lhs", expr.lhs)                                   //
         .dump("rhs", expr.rhs);
+}
+
+template <class T>
+check_handle make_check_handle(check_kind kind, char const* expr_text, lhs_holder<T> const& expr, std::source_location loc)
+{
+    static_assert(requires(T const& v) { bool(v); }, "type must be castable to bool in CHECK/REQUIRE(v)");
+
+    return check_handle::make(kind, expr_text, bool(expr.lhs), loc) //
+        .dump("value", expr.lhs);
 }
 
 } // namespace nx::impl

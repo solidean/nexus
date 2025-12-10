@@ -14,6 +14,7 @@ endif()
 add_library(nexus
     src/nexus/check.cc
     src/nexus/config.cc
+    src/nexus/impl/registration.cc
     src/nexus/run.cc
     src/nexus/test.cc
     src/nexus/test_example.cc
@@ -29,6 +30,7 @@ target_sources(nexus
     FILES
     src/nexus/check.hh
     src/nexus/config.hh
+    src/nexus/impl/registration.hh
     src/nexus/run.hh
     src/nexus/test.hh
     src/nexus/fwd.hh
@@ -52,3 +54,15 @@ target_link_libraries(nexus
     PUBLIC
     clean-core
 )
+
+# Test executable
+add_executable(nexus-test
+    tests/main.cc
+    tests/test-api-test.cc
+)
+
+target_link_libraries(nexus-test
+    PRIVATE
+    nexus
+)
+
