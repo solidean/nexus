@@ -13,6 +13,11 @@ struct test_context
     nx::test_execution* execution = nullptr;
 };
 
+// Exception thrown when a REQUIRE fails
+struct test_require_failed
+{
+};
+
 thread_local std::vector<test_context> g_context_stack;
 
 void test_execute_begin(nx::test_execution& execution) { g_context_stack.push_back(test_context{.execution = &execution}); }
@@ -68,6 +73,10 @@ void nx::impl::report_check_result(check_kind kind, cmp_op op, std::string expr,
             .extra_lines = std::move(extra_lines),
             .expanded = std::move(expanded),
         });
+
+        // If this was a REQUIRE, throw exception to abort test execution
+        if (kind == check_kind::require)
+            throw test_require_failed{};
     }
 }
 
@@ -125,6 +134,11 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
             try
             {
                 (*instance.declaration->function)();
+            }
+            catch (test_require_failed const&) // NOLINT(bugprone-empty-catch)
+            {
+                // REQUIRE failure already logged in report_check_result, this catch
+                // only serves to abort test execution without treating it as a further error
             }
             catch (std::exception const& e)
             {

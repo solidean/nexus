@@ -28,7 +28,7 @@ nx::impl::check_handle nx::impl::check_handle::make(check_kind kind, cmp_op op, 
     return handle;
 }
 
-nx::impl::check_handle::~check_handle()
+nx::impl::check_handle::~check_handle() noexcept(false)
 {
     if (ctx)
     {

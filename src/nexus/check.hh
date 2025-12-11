@@ -125,7 +125,7 @@ struct check_handle final
     check_handle& operator=(check_handle&&) = default;
     check_handle& operator=(check_handle const&) = delete;
 
-    ~check_handle();
+    ~check_handle() noexcept(false);
 
     check_handle context(char const* msg) &&;
     check_handle note(char const* msg) &&;
