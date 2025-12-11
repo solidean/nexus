@@ -1,7 +1,7 @@
 #pragma once
 
-#include <nexus/check.hh>
-#include <nexus/config.hh>
+#include <nexus/tests/check.hh>
+#include <nexus/tests/config.hh>
 
 #include <clean-core/macros.hh>
 

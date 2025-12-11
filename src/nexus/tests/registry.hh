@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nexus/config.hh>
+#include <nexus/tests/config.hh>
 
 #include <functional>
 #include <memory>

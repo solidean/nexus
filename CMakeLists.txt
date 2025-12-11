@@ -12,11 +12,10 @@ endif()
 
 # Define the library and its sources
 add_library(nexus
-    src/nexus/check.cc
-    src/nexus/config.cc
     src/nexus/run.cc
-    src/nexus/test_example.cc
     src/nexus/test.cc
+    src/nexus/tests/check.cc
+    src/nexus/tests/config.cc
     src/nexus/tests/execute.cc
     src/nexus/tests/registry.cc
     src/nexus/tests/schedule.cc
@@ -30,11 +29,11 @@ target_sources(nexus
     TYPE HEADERS
     BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src"
     FILES
-    src/nexus/check.hh
-    src/nexus/config.hh
     src/nexus/fwd.hh
     src/nexus/run.hh
     src/nexus/test.hh
+    src/nexus/tests/check.hh
+    src/nexus/tests/config.hh
     src/nexus/tests/execute.hh
     src/nexus/tests/registry.hh
     src/nexus/tests/schedule.hh

@@ -1,6 +1,6 @@
 #include "execute.hh"
 
-#include <nexus/check.hh>
+#include <nexus/tests/check.hh>
 
 #include <chrono>
 

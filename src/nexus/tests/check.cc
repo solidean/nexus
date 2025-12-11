@@ -1,4 +1,4 @@
-#include <nexus/check.hh>
+#include <nexus/tests/check.hh>
 #include <nexus/tests/execute.hh>
 
 // TODO: remove me

@@ -1,5 +1,5 @@
-#include <nexus/config.hh>
 #include <nexus/test.hh>
+#include <nexus/tests/config.hh>
 #include <nexus/tests/execute.hh>
 #include <nexus/tests/registry.hh>
 #include <nexus/tests/schedule.hh>
