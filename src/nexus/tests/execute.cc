@@ -122,7 +122,28 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
         // Execute the test function if it exists
         if (instance.declaration && instance.declaration->function)
         {
-            instance.declaration->function();
+            try
+            {
+                (*instance.declaration->function)();
+            }
+            catch (std::exception const& e)
+            {
+                execution.errors.push_back(test_error{
+                    .expr = {},
+                    .location = instance.declaration->location,
+                    .extra_lines = {},
+                    .expanded = std::format("uncaught exception: {}", e.what()),
+                });
+            }
+            catch (...)
+            {
+                execution.errors.push_back(test_error{
+                    .expr = {},
+                    .location = instance.declaration->location,
+                    .extra_lines = {},
+                    .expanded = "uncaught unknown exception",
+                });
+            }
         }
 
         // Calculate duration

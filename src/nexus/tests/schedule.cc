@@ -46,8 +46,21 @@ nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, ch
             continue;
         }
 
-        // Regular filter argument
-        config.filters.emplace_back(arg);
+        // Regular filter argument - split by comma for Catch2 compatibility
+        size_t start = 0;
+        size_t end = arg.find(',');
+        while (end != std::string::npos)
+        {
+            std::string const filter = arg.substr(start, end - start);
+            if (!filter.empty())
+                config.filters.emplace_back(filter);
+            start = end + 1;
+            end = arg.find(',', start);
+        }
+        // Add the last (or only) filter
+        std::string const filter = arg.substr(start);
+        if (!filter.empty())
+            config.filters.emplace_back(filter);
     }
 
     // Enable Catch2 XML discovery mode if all three flags are present
