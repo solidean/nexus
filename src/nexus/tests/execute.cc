@@ -17,9 +17,20 @@ namespace
 struct test_section
 {
     std::unordered_map<std::string, std::unique_ptr<test_section>> subsections;
-    std::queue<test_section*> open_sections; // with at least one non-done leaf
+    test_section* next_open_section = nullptr;
     bool is_done = false;
     int last_visited_in_exec = -1;
+    std::source_location location;
+    std::string name;
+
+    void collect_not_done_sections(std::vector<test_section const*>& secs) const
+    {
+        if (!is_done)
+            secs.push_back(this);
+
+        for (auto const& kvp : subsections)
+            kvp.second->collect_not_done_sections(secs);
+    }
 };
 
 struct test_context
@@ -50,6 +61,7 @@ void test_execute_begin(nx::test_execution& execution)
         .execution = &execution,
         .root_section = std::make_unique<test_section>(),
     });
+    g_context_stack.back().root_section->location = execution.instance.declaration->location;
     g_context_stack.back().curr_section.push_back(g_context_stack.back().root_section.get());
 }
 
@@ -86,7 +98,8 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
     if (subsec == nullptr)
     {
         subsec = std::make_unique<test_section>();
-        curr_sec.open_sections.push(subsec.get());
+        subsec->name = name;
+        subsec->location = location;
     }
 
     // section opened twice in the same run
@@ -98,7 +111,11 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
 
     // don't execute more sections if a leaf was already executed
     if (ctx.found_leaf)
+    {
+        // but note down that parent could continue here
+        curr_sec.next_open_section = subsec.get();
         return raii_section_opener(false);
+    }
 
     // don't execute sections that are fully done
     if (subsec->is_done)
@@ -106,6 +123,7 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
 
     // .. otherwise enter it
     ctx.curr_section.push_back(subsec.get());
+    subsec->next_open_section = nullptr;
     return raii_section_opener(true);
 }
 
@@ -119,20 +137,12 @@ nx::impl::raii_section_opener::~raii_section_opener()
         auto& subsec = *ctx.curr_section.back();
 
         // if after the section we have no subsecs => found & executed a leaf!
-        if (subsec.subsections.empty())
+        // (no next open, might have unreachable still)
+        // also applies to our way back up
+        if (subsec.next_open_section == nullptr)
         {
             ctx.found_leaf = true;
             subsec.is_done = true;
-        }
-        else // otherwise we're on the way up again
-        {
-            // pop done sections
-            while (!subsec.open_sections.empty() && subsec.open_sections.front()->is_done)
-                subsec.open_sections.pop();
-
-            // no open anymore? => this subsec is done
-            if (subsec.open_sections.empty())
-                subsec.is_done = true;
         }
 
         ctx.curr_section.pop_back();
@@ -234,6 +244,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
                     auto& ctx = g_context_stack.back();
                     ctx.exec_count++;
                     ctx.found_leaf = false;
+                    ctx.root_section->next_open_section = nullptr;
                 }
 
                 try
@@ -274,17 +285,12 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
                     });
                 }
 
-                // section bookkeeping
+                // no new sections to execute? we're done
+                if (g_context_stack.back().root_section->next_open_section == nullptr)
                 {
-                    auto& ctx = g_context_stack.back();
-
-                    // mark subsecs as done
-                    while (!ctx.root_section->open_sections.empty() && ctx.root_section->open_sections.front()->is_done)
-                        ctx.root_section->open_sections.pop();
-
-                    // no further sections => we're done
-                    if (ctx.root_section->open_sections.empty())
-                        break;
+                    // so it's not marked as unreachable
+                    g_context_stack.back().root_section->is_done = true;
+                    break;
                 }
             }
         }
@@ -294,20 +300,35 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
         std::chrono::duration<double> const duration = end_time - start_time;
         execution.duration_seconds = duration.count();
 
+        // Check for unreachable sections
+        {
+            std::vector<test_section const*> unreachable_sections;
+            g_context_stack.back().root_section->collect_not_done_sections(unreachable_sections);
+            for (auto const& sec : unreachable_sections)
+                execution.errors.push_back(test_error{
+                    .expr = "",
+                    .location = sec->location,
+                    .extra_lines = {},
+                    .expanded = std::format("section \"{}\" was discovered but unreachable", sec->name),
+                });
+        }
+
         // Clean up test context
         test_execute_end();
 
         // Check if test contained any checks
+        // TODO: check for each section
         if (execution.executed_checks == 0 && instance.declaration)
         {
             execution.errors.push_back(test_error{
-                .expr = "test did not contain CHECK/REQUIRE",
+                .expr = "",
                 .location = instance.declaration->location,
                 .extra_lines = {"This is often a bug and can be silenced via CHECK(true)"},
+                .expanded = "test did not contain CHECK/REQUIRE",
             });
         }
 
-        result.executions.push_back(execution);
+        result.executions.push_back(std::move(execution));
     }
 
     return result;
