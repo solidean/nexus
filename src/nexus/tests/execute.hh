@@ -41,6 +41,8 @@ struct test_schedule_execution
 
     [[nodiscard]] int count_total_tests() const;
     [[nodiscard]] int count_failed_tests() const;
+    [[nodiscard]] int count_total_checks() const;
+    [[nodiscard]] int count_failed_checks() const;
 };
 
 test_schedule_execution execute_tests(test_schedule const& schedule);

@@ -59,6 +59,22 @@ int nx::test_schedule_execution::count_failed_tests() const
     return failed;
 }
 
+int nx::test_schedule_execution::count_total_checks() const
+{
+    int total = 0;
+    for (auto const& exec : executions)
+        total += exec.executed_checks;
+    return total;
+}
+
+int nx::test_schedule_execution::count_failed_checks() const
+{
+    int failed = 0;
+    for (auto const& exec : executions)
+        failed += exec.failed_checks;
+    return failed;
+}
+
 nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
 {
     test_schedule_execution result;

@@ -30,6 +30,8 @@ int nx::run(int argc, char** argv)
     // Check for failures
     int const failed_tests = execution.count_failed_tests();
     int const total_tests = execution.count_total_tests();
+    int const failed_checks = execution.count_failed_checks();
+    int const total_checks = execution.count_total_checks();
 
     if (failed_tests > 0)
     {
@@ -48,10 +50,11 @@ int nx::run(int argc, char** argv)
         }
 
         std::cerr << "\n" << failed_tests << " of " << total_tests << " tests failed\n";
+        std::cerr << "Failed " << failed_checks << " of " << total_checks << " checks\n";
         return 1;
     }
 
     // All tests passed
-    std::cout << "All " << total_tests << " tests passed\n";
+    std::cout << "All " << total_tests << " tests passed (" << total_checks << " checks)\n";
     return 0;
 }
