@@ -14,10 +14,12 @@ endif()
 add_library(nexus
     src/nexus/check.cc
     src/nexus/config.cc
-    src/nexus/impl/registration.cc
     src/nexus/run.cc
-    src/nexus/test.cc
     src/nexus/test_example.cc
+    src/nexus/test.cc
+    src/nexus/tests/execute.cc
+    src/nexus/tests/registry.cc
+    src/nexus/tests/schedule.cc
 )
 
 # Public headers live co-located in src/ for better editor experience.
@@ -30,10 +32,12 @@ target_sources(nexus
     FILES
     src/nexus/check.hh
     src/nexus/config.hh
-    src/nexus/impl/registration.hh
+    src/nexus/fwd.hh
     src/nexus/run.hh
     src/nexus/test.hh
-    src/nexus/fwd.hh
+    src/nexus/tests/execute.hh
+    src/nexus/tests/registry.hh
+    src/nexus/tests/schedule.hh
 )
 
 # Libraries should not set a global C++ standard here.
@@ -65,4 +69,3 @@ target_link_libraries(nexus-test
     PRIVATE
     nexus
 )
-

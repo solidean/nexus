@@ -1,7 +1,13 @@
-#include <nexus/impl/registration.hh>
 #include <nexus/test.hh>
+#include <nexus/tests/registry.hh>
+
 
 void nx::impl::register_test(char const* name, config::cfg test_config, void (*fn)(), std::source_location loc)
 {
-    get_test_registry().push_back(test_registration{name, test_config, fn, loc});
+    nx::get_static_test_registry().declarations.push_back(test_declaration{
+        .name = name,
+        .test_config = test_config,
+        .function = fn,
+        .location = loc,
+    });
 }

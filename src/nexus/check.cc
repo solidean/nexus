@@ -1,4 +1,5 @@
 #include <nexus/check.hh>
+#include <nexus/tests/execute.hh>
 
 // TODO: remove me
 #include <string>
@@ -25,7 +26,7 @@ static char const* op_to_string(cmp_op op)
 struct nx::impl::check_handle::impl_context
 {
     check_kind kind;
-    char const* expr_text;
+    std::string expr_text;
     bool passed;
     std::source_location location;
     std::vector<std::string> extra_lines;
@@ -45,7 +46,10 @@ nx::impl::check_handle nx::impl::check_handle::make(check_kind kind, char const*
 
 nx::impl::check_handle::~check_handle()
 {
-    // TODO: report to test
+    if (ctx)
+    {
+        nx::impl::report_check_result(ctx->kind, std::move(ctx->expr_text), ctx->passed, std::move(ctx->extra_lines), ctx->location);
+    }
 }
 
 nx::impl::check_handle nx::impl::check_handle::add_extra_line(std::string line) &&

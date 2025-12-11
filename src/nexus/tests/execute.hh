@@ -1,0 +1,56 @@
+#pragma once
+
+#include <nexus/tests/schedule.hh>
+
+#include <source_location>
+#include <string>
+#include <vector>
+
+// Forward declaration for impl namespace
+namespace nx
+{
+namespace impl
+{
+enum class check_kind;
+}
+}
+
+namespace nx
+{
+struct test_error
+{
+    std::string expr;
+    std::source_location location;
+    std::vector<std::string> extra_lines;
+};
+
+struct test_execution
+{
+    test_instance instance;
+    int executed_checks = 0;
+    int failed_checks = 0;
+    int failed_assertions = 0;
+    std::vector<test_error> errors;
+
+    [[nodiscard]] bool is_considered_failing() const;
+};
+
+struct test_schedule_execution
+{
+    std::vector<test_execution> executions;
+
+    [[nodiscard]] int count_total_tests() const;
+    [[nodiscard]] int count_failed_tests() const;
+};
+
+test_schedule_execution execute_tests(test_schedule const& schedule);
+
+} // namespace nx
+
+namespace nx
+{
+namespace impl
+{
+void report_check_result(check_kind kind, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location);
+}
+}
