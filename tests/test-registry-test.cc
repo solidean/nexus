@@ -5,7 +5,7 @@
 #include <nexus/tests/schedule.hh>
 
 
-TEST("registry basics")
+TEST("test registry - basics")
 {
     nx::test_registry reg;
     reg.add_declaration( //
@@ -25,7 +25,7 @@ TEST("registry basics")
     CHECK(exec.count_failed_checks() == 0);
 }
 
-TEST("registry - multi-test multi-check accounting")
+TEST("test registry - multi-test multi-check accounting")
 {
     nx::test_registry reg;
 
@@ -63,7 +63,7 @@ TEST("registry - multi-test multi-check accounting")
     CHECK(exec.count_failed_checks() == 4); // 1 from T2, 3 from T3
 }
 
-TEST("registry - CHECK continues after failure")
+TEST("test registry - CHECK continues after failure")
 {
     nx::test_registry reg;
 
@@ -89,7 +89,7 @@ TEST("registry - CHECK continues after failure")
     CHECK(exec.count_failed_checks() == 1); // only the first CHECK failed
 }
 
-TEST("registry - REQUIRE aborts test on failure")
+TEST("test registry - REQUIRE aborts test on failure")
 {
     nx::test_registry reg;
 
@@ -115,7 +115,7 @@ TEST("registry - REQUIRE aborts test on failure")
     CHECK(exec.count_failed_checks() == 1); // REQUIRE counts as a check
 }
 
-TEST("registry - disabled tests are not executed")
+TEST("test registry - disabled tests are not executed")
 {
     nx::test_registry reg;
 
@@ -150,7 +150,7 @@ TEST("registry - disabled tests are not executed")
     CHECK(exec.count_failed_checks() == 0);
 }
 
-TEST("registry - config via aggregate literal vs merge_config are equivalent")
+TEST("test registry - config via aggregate literal vs merge_config are equivalent")
 {
     nx::test_registry reg;
 
@@ -189,7 +189,7 @@ TEST("registry - config via aggregate literal vs merge_config are equivalent")
     CHECK(exec.count_failed_checks() == 0);
 }
 
-TEST("registry - seed configuration is stored")
+TEST("test registry - seed configuration is stored")
 {
     nx::test_registry reg;
 
@@ -213,7 +213,7 @@ TEST("registry - seed configuration is stored")
     CHECK(exec.count_failed_tests() == 0);
 }
 
-TEST("registry - uncaught exceptions become failing tests")
+TEST("test registry - uncaught exceptions become failing tests")
 {
     nx::test_registry reg;
 
@@ -238,7 +238,7 @@ TEST("registry - uncaught exceptions become failing tests")
     // We accept either count_failed_checks() == 0 or == 1 depending on implementation
 }
 
-TEST("registry - failure attribution with mixed CHECK and REQUIRE")
+TEST("test registry - failure attribution with mixed CHECK and REQUIRE")
 {
     nx::test_registry reg;
 
@@ -260,7 +260,7 @@ TEST("registry - failure attribution with mixed CHECK and REQUIRE")
     CHECK(exec.count_failed_tests() == 1);  // 1 test failed
 }
 
-TEST("registry - duplicate test names are both registered")
+TEST("test registry - duplicate test names are both registered")
 {
     nx::test_registry reg;
 
@@ -293,7 +293,7 @@ TEST("registry - duplicate test names are both registered")
     CHECK(exec.count_failed_tests() == 0);
 }
 
-TEST("registry - test with zero checks is counted as a test")
+TEST("test registry - test with zero checks is counted as a test")
 {
     nx::test_registry reg;
 
@@ -330,7 +330,7 @@ TEST("registry - test with zero checks is counted as a test")
     CHECK(exec.count_failed_checks() == 0); // no failed CHECKs, just missing checks
 }
 
-TEST("registry - schedule integration with run_disabled_tests config")
+TEST("test registry - schedule integration with run_disabled_tests config")
 {
     nx::test_registry reg;
 

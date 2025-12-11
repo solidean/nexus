@@ -63,6 +63,7 @@ add_executable(nexus-test
     tests/main.cc
     tests/test-api-test.cc
     tests/test-registry-test.cc
+    tests/test-section-test.cc
 )
 
 target_link_libraries(nexus-test

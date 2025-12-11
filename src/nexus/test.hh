@@ -2,6 +2,7 @@
 
 #include <nexus/tests/check.hh>
 #include <nexus/tests/config.hh>
+#include <nexus/tests/section.hh>
 
 #include <clean-core/macros.hh>
 
