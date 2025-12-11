@@ -2,9 +2,11 @@
 
 #include <nexus/tests/schedule.hh>
 
+#include <chrono>
 #include <source_location>
 #include <string>
 #include <vector>
+
 
 // Forward declaration for impl namespace
 namespace nx
@@ -12,8 +14,9 @@ namespace nx
 namespace impl
 {
 enum class check_kind;
-}
-}
+enum class cmp_op;
+} // namespace impl
+} // namespace nx
 
 namespace nx
 {
@@ -22,6 +25,7 @@ struct test_error
     std::string expr;
     std::source_location location;
     std::vector<std::string> extra_lines;
+    std::string expanded;
 };
 
 struct test_execution
@@ -31,6 +35,7 @@ struct test_execution
     int failed_checks = 0;
     int failed_assertions = 0;
     std::vector<test_error> errors;
+    double duration_seconds = 0.0;
 
     [[nodiscard]] bool is_considered_failing() const;
 };
@@ -53,6 +58,6 @@ namespace nx
 {
 namespace impl
 {
-void report_check_result(check_kind kind, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location);
+void report_check_result(check_kind kind, cmp_op op, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location);
 }
-}
+} // namespace nx

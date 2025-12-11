@@ -6,13 +6,107 @@
 
 #include <iostream>
 
+namespace
+{
+void print_help()
+{
+    std::cout << "nexus - Unified test, fuzz, benchmark, and app runner for modern C++\n\n";
+    // Advertise Catch2 compatibility to enable C++ TestMate IDE extension recognition
+    std::cout << "Compatible with Catch2 v3.11.0 in some args\n\n";
+    std::cout << "Usage:\n";
+    std::cout << "  <test-executable> [options]\n\n";
+    std::cout << "For more information, see the nexus documentation.\n";
+}
+
+void print_catch2_xml_discovery(nx::test_registry const& registry)
+{
+    std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    std::cout << "<MatchingTests>\n";
+
+    for (auto const& decl : registry.declarations)
+    {
+        std::cout << "  <TestCase>\n";
+        std::cout << "    <Name>" << decl.name << "</Name>\n";
+        std::cout << "    <ClassName/>\n";
+        std::cout << "    <Tags></Tags>\n";
+        std::cout << "    <SourceInfo>\n";
+        std::cout << "      <File>" << decl.location.file_name() << "</File>\n";
+        std::cout << "      <Line>" << decl.location.line() << "</Line>\n";
+        std::cout << "    </SourceInfo>\n";
+        std::cout << "  </TestCase>\n";
+    }
+
+    std::cout << "</MatchingTests>\n";
+}
+
+void print_catch2_execute_result(nx::test_schedule_execution const& execution)
+{
+    std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    std::cout << "<TestRun>\n";
+
+    for (auto const& exec : execution.executions)
+    {
+        if (exec.instance.declaration)
+        {
+            auto const& decl = *exec.instance.declaration;
+            bool const success = !exec.is_considered_failing();
+
+            std::cout << "  <TestCase name=\"" << decl.name << "\" ";
+            std::cout << "filename=\"" << decl.location.file_name() << "\" ";
+            std::cout << "line=\"" << decl.location.line() << "\">\n";
+
+            // If test failed, add error expressions (max 10)
+            if (!success)
+            {
+                int const max_errors = 10;
+                int error_count = 0;
+                for (auto const& error : exec.errors)
+                {
+                    if (error_count >= max_errors)
+                        break;
+
+                    std::cout << "    <Expression success=\"false\" ";
+                    std::cout << "filename=\"" << error.location.file_name() << "\" ";
+                    std::cout << "line=\"" << error.location.line() << "\">\n";
+                    std::cout << "      <Original>" << error.expr << "</Original>\n";
+                    std::cout << "      <Expanded>" << error.expanded << "</Expanded>\n";
+                    std::cout << "    </Expression>\n";
+
+                    ++error_count;
+                }
+            }
+
+            std::cout << "    <OverallResult success=\"" << (success ? "true" : "false") << "\" ";
+            std::cout << "durationInSeconds=\"" << exec.duration_seconds << "\"/>\n";
+            std::cout << "  </TestCase>\n";
+        }
+    }
+
+    std::cout << "</TestRun>\n";
+}
+} // namespace
+
 int nx::run(int argc, char** argv)
 {
+    // Handle --help flag
+    if (argc == 2 && std::string_view(argv[1]) == "--help")
+    {
+        print_help();
+        return 0;
+    }
+
     // Create schedule config from command line arguments
     auto config = test_schedule_config::create_from_args(argc, argv);
 
     // Get the static test registry
     auto& registry = get_static_test_registry();
+
+    // Handle Catch2 XML discovery mode for TestMate integration
+    if (config.is_catch2_xml_discovery)
+    {
+        print_catch2_xml_discovery(registry);
+        return 0;
+    }
 
     // Create schedule from config and registry
     auto schedule = test_schedule::create(config, registry);
@@ -21,11 +115,22 @@ int nx::run(int argc, char** argv)
     if (schedule.instances.empty())
     {
         std::cerr << "Error: The current schedule did not select any tests\n";
+        for (int i = 0; i < argc; ++i)
+        {
+            std::cerr << "  arg[" << i << "] = `" << argv[i] << "'\n";
+        }
         return 1;
     }
 
     // Execute the scheduled tests
     auto execution = execute_tests(schedule);
+
+    // Handle Catch2 XML results reporting for TestMate integration
+    if (config.report_catch2_xml_results)
+    {
+        print_catch2_execute_result(execution);
+        return execution.count_failed_tests() > 0 ? 1 : 0;
+    }
 
     // Check for failures
     int const failed_tests = execution.count_failed_tests();

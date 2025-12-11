@@ -4,11 +4,57 @@ nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, ch
 {
     test_schedule_config config;
 
+    // Track Catch2 compatibility flags for XML discovery mode
+    bool has_verbosity = false;
+    bool has_list_tests = false;
+    bool has_xml_reporter = false;
+    bool has_durations = false;
+
     // Parse command line arguments
     for (int i = 1; i < argc; ++i)
     {
-        config.filters.emplace_back(argv[i]);
+        std::string const arg = argv[i];
+
+        // Check for Catch2 compatibility flags (don't add to filters)
+        if (arg == "--verbosity")
+        {
+            has_verbosity = true;
+            // Skip the next argument (verbosity level)
+            if (i + 1 < argc)
+                ++i;
+            continue;
+        }
+        else if (arg == "--list-tests")
+        {
+            has_list_tests = true;
+            continue;
+        }
+        else if (arg == "--reporter")
+        {
+            has_xml_reporter = true;
+            // Skip the next argument (reporter type)
+            if (i + 1 < argc)
+                ++i;
+            continue;
+        }
+        else if (arg == "--durations")
+        {
+            has_durations = true;
+            // Skip the next argument (durations value)
+            if (i + 1 < argc)
+                ++i;
+            continue;
+        }
+
+        // Regular filter argument
+        config.filters.emplace_back(arg);
     }
+
+    // Enable Catch2 XML discovery mode if all three flags are present
+    config.is_catch2_xml_discovery = has_verbosity && has_list_tests && has_xml_reporter;
+
+    // Enable Catch2 XML results reporting if durations + xml reporter (and not list tests)
+    config.report_catch2_xml_results = has_durations && has_xml_reporter && !has_list_tests;
 
     // If filters are provided with non-wildcard matches, enable running disabled tests
     if (!config.filters.empty())

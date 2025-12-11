@@ -16,6 +16,8 @@ struct test_schedule_config
 {
     std::vector<std::string> filters;
     bool run_disabled_tests = false;
+    bool is_catch2_xml_discovery = false;
+    bool report_catch2_xml_results = false;
 
     static test_schedule_config create_from_args(int argc, char** argv);
 };

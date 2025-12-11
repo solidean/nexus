@@ -20,6 +20,7 @@ enum class check_kind
 // Comparison operators
 enum class cmp_op
 {
+    none,
     less,
     less_equal,
     greater,
@@ -135,13 +136,15 @@ struct check_handle final
         return std::move(*this).add_extra_line(std::format("{}: {}", label, value));
     }
 
+    // 2 dumps is used for CHECK(lhs op rhs)
+    // 1 dump for CHECK(value)
     template <class T>
     check_handle dump(T const& value) &&
     {
         return std::move(*this).add_extra_line(std::format("{}", value));
     }
 
-    static check_handle make(check_kind kind, char const* expr_text, bool passed, std::source_location loc);
+    static check_handle make(check_kind kind, cmp_op op, char const* expr_text, bool passed, std::source_location loc);
 
 private:
     check_handle add_extra_line(std::string line) &&;
@@ -151,10 +154,9 @@ private:
 template <class L, class R>
 check_handle make_check_handle(check_kind kind, char const* expr_text, binary_expr_capture<L, R> const& expr, std::source_location loc)
 {
-    // TODO: do we need "op"?
-    return check_handle::make(kind, expr_text, expr.passed, loc) //
-        .dump("lhs", expr.lhs)                                   //
-        .dump("rhs", expr.rhs);
+    return check_handle::make(kind, expr.op, expr_text, expr.passed, loc) //
+        .dump(expr.lhs)                                                   //
+        .dump(expr.rhs);
 }
 
 template <class T>
@@ -162,8 +164,8 @@ check_handle make_check_handle(check_kind kind, char const* expr_text, lhs_holde
 {
     static_assert(requires(T const& v) { bool(v); }, "type must be castable to bool in CHECK/REQUIRE(v)");
 
-    return check_handle::make(kind, expr_text, bool(expr.lhs), loc) //
-        .dump("value", expr.lhs);
+    return check_handle::make(kind, cmp_op::none, expr_text, bool(expr.lhs), loc) //
+        .dump(expr.lhs);
 }
 
 } // namespace nx::impl

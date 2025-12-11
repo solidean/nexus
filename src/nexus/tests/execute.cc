@@ -2,6 +2,10 @@
 
 #include <nexus/check.hh>
 
+#include <chrono>
+
+namespace nx
+{
 namespace
 {
 struct test_context
@@ -14,9 +18,27 @@ thread_local std::vector<test_context> g_context_stack;
 void test_execute_begin(nx::test_execution& execution) { g_context_stack.push_back(test_context{.execution = &execution}); }
 
 void test_execute_end() { g_context_stack.pop_back(); }
-} // namespace
 
-void nx::impl::report_check_result(check_kind kind, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location)
+// Operator to string conversion
+char const* op_to_string(impl::cmp_op op)
+{
+    using namespace impl;
+    switch (op)
+    {
+    case cmp_op::none: return "";
+    case cmp_op::less: return "<";
+    case cmp_op::less_equal: return "<=";
+    case cmp_op::greater: return ">";
+    case cmp_op::greater_equal: return ">=";
+    case cmp_op::equal: return "==";
+    case cmp_op::not_equal: return "!=";
+    }
+    return "?";
+}
+} // namespace
+} // namespace nx
+
+void nx::impl::report_check_result(check_kind kind, cmp_op op, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location)
 {
     if (g_context_stack.empty())
         return; // No active test context
@@ -33,11 +55,18 @@ void nx::impl::report_check_result(check_kind kind, std::string expr, bool passe
     {
         ++execution->failed_checks;
 
+        std::string expanded;
+        if (op == cmp_op::none)
+            expanded = std::format("is: {}", extra_lines[0]);
+        else
+            expanded = std::format("is: {} {} {}", extra_lines[0], op_to_string(op), extra_lines[1]);
+
         // Add test error
         execution->errors.push_back(test_error{
             .expr = std::move(expr),
             .location = location,
             .extra_lines = std::move(extra_lines),
+            .expanded = std::move(expanded),
         });
     }
 }
@@ -87,11 +116,19 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
         // Set up test context for check reporting
         test_execute_begin(execution);
 
+        // Measure test execution time
+        auto const start_time = std::chrono::high_resolution_clock::now();
+
         // Execute the test function if it exists
         if (instance.declaration && instance.declaration->function)
         {
             instance.declaration->function();
         }
+
+        // Calculate duration
+        auto const end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> const duration = end_time - start_time;
+        execution.duration_seconds = duration.count();
 
         // Clean up test context
         test_execute_end();

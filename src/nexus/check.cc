@@ -5,38 +5,22 @@
 #include <string>
 #include <vector>
 
-namespace nx::impl
-{
-// Operator to string conversion
-static char const* op_to_string(cmp_op op)
-{
-    switch (op)
-    {
-    case cmp_op::less: return "<";
-    case cmp_op::less_equal: return "<=";
-    case cmp_op::greater: return ">";
-    case cmp_op::greater_equal: return ">=";
-    case cmp_op::equal: return "==";
-    case cmp_op::not_equal: return "!=";
-    }
-    return "?";
-}
-} // namespace nx::impl
-
 struct nx::impl::check_handle::impl_context
 {
     check_kind kind;
+    cmp_op op;
     std::string expr_text;
     bool passed;
     std::source_location location;
     std::vector<std::string> extra_lines;
 };
 
-nx::impl::check_handle nx::impl::check_handle::make(check_kind kind, char const* expr_text, bool passed, std::source_location loc)
+nx::impl::check_handle nx::impl::check_handle::make(check_kind kind, cmp_op op, char const* expr_text, bool passed, std::source_location loc)
 {
     check_handle handle;
     handle.ctx = std::make_unique<impl_context>(impl_context{
         .kind = kind,
+        .op = op,
         .expr_text = expr_text,
         .passed = passed,
         .location = loc,
@@ -48,7 +32,7 @@ nx::impl::check_handle::~check_handle()
 {
     if (ctx)
     {
-        nx::impl::report_check_result(ctx->kind, std::move(ctx->expr_text), ctx->passed, std::move(ctx->extra_lines), ctx->location);
+        nx::impl::report_check_result(ctx->kind, ctx->op, std::move(ctx->expr_text), ctx->passed, std::move(ctx->extra_lines), ctx->location);
     }
 }
 
