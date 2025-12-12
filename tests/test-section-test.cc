@@ -49,6 +49,48 @@ TEST("test sections - basics")
     CHECK(exec.count_failed_checks() == 0);
 }
 
+TEST("test sections - basics nested")
+{
+    int counterA = 0;
+    int counterB = 0;
+    int counterC = 0;
+
+    nx::test_registry reg;
+    reg.add_declaration( //
+        "testA", {},
+        [&]
+        {
+            SECTION("outer")
+            {
+                counterA++;
+
+                SECTION("sec A")
+                {
+                    counterB++;
+                    CHECK(true);
+                }
+
+                SECTION("sec B")
+                {
+                    counterC++;
+                    CHECK(true);
+                }
+            }
+        });
+
+    auto schedule = nx::test_schedule::create({}, reg);
+    auto exec = nx::execute_tests(schedule);
+
+    CHECK(counterA == 2);
+    CHECK(counterB == 1);
+    CHECK(counterC == 1);
+
+    CHECK(exec.count_total_tests() == 1);
+    CHECK(exec.count_total_checks() == 2);
+    CHECK(exec.count_failed_tests() == 0);
+    CHECK(exec.count_failed_checks() == 0);
+}
+
 TEST("test sections - canonical preorder + counts on a richer tree")
 {
     int counterRoot = 0;
@@ -124,7 +166,7 @@ TEST("test sections - canonical preorder + counts on a richer tree")
     // Run 2: root -> A -> A2: logs 1, 3
     // Run 3: root -> B -> B1: logs 4, 5
     // Run 4: root -> C: logs 6
-    std::vector<int> const expectedLog = {1, 2, 1, 3, 4, 5, 6};
+    auto const expectedLog = std::vector<int>{1, 2, 1, 3, 4, 5, 6};
     CHECK(log == expectedLog);
 
     CHECK(exec.count_total_tests() == 1);
@@ -161,7 +203,7 @@ TEST("test sections - distinct dynamic sections in a loop, preorder stable")
 
     CHECK(counterRoot == N);
 
-    std::vector<int> const expectedLog = {0, 1, 2, 3};
+    auto const expectedLog = std::vector<int>{0, 1, 2, 3};
     CHECK(log == expectedLog);
 
     CHECK(exec.count_total_tests() == 1);
@@ -174,7 +216,7 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
 {
     int N = 3;
     int counterRoot = 0;
-    std::vector<std::pair<int, char const*>> log;
+    std::vector<std::pair<int, std::string>> log;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -209,7 +251,7 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
 
     // Each run executes from root through parent section to leaf:
     // Run for i=0/even, then i=0/odd, then i=1/even, then i=1/odd, etc.
-    std::vector<std::pair<int, char const*>> expected = {
+    auto const expected = std::vector<std::pair<int, std::string>>{
         {0, "even"}, {0, "odd"}, {1, "even"}, {1, "odd"}, {2, "even"}, {2, "odd"},
     };
     CHECK(log == expected);
@@ -223,7 +265,7 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
 TEST("test sections - conditionally active subsections across runs (all reachable)")
 {
     int counterRoot = 0;
-    std::vector<char const*> log;
+    std::vector<std::string> log;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -238,7 +280,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
                 {
                     SECTION("first")
                     {
-                        log.push_back("first");
+                        log.emplace_back("first");
                         phase = 1;
                         CHECK(true);
                     }
@@ -247,9 +289,17 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
                 {
                     SECTION("second")
                     {
-                        log.push_back("second");
+                        log.emplace_back("second");
                         CHECK(true);
                     }
+                }
+
+                // NOTE: we need another section here so we don't close outer early
+                //       this "ultra" dynamic discovery is not super useful
+                SECTION("third")
+                {
+                    log.emplace_back("third");
+                    CHECK(true);
                 }
             }
         });
@@ -257,13 +307,17 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule);
 
-    CHECK(counterRoot == 2);
+    CHECK(counterRoot == 3);
 
-    std::vector<char const*> expected = {"first", "second"};
+    auto const expected = std::vector<std::string>{
+        "first",
+        "second",
+        "third",
+    };
     CHECK(log == expected);
 
     CHECK(exec.count_total_tests() == 1);
-    CHECK(exec.count_total_checks() == 2);
+    CHECK(exec.count_total_checks() == 3);
     CHECK(exec.count_failed_tests() == 0);
     CHECK(exec.count_failed_checks() == 0);
 }
@@ -340,16 +394,16 @@ TEST("test sections - duplicate sibling section names => immediate error")
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule);
 
-    CHECK(first <= 1);
-    CHECK(second <= 1);
+    CHECK(first == 1);
+    CHECK(second == 0);
 
-    CHECK(exec.count_total_checks() == 2);
+    CHECK(exec.count_total_checks() == 1);
     CHECK(exec.count_failed_tests() == 1);
 }
 
 TEST("test sections - failure in one leaf still allows siblings to run")
 {
-    std::vector<char const*> log;
+    std::vector<std::string> log;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -360,13 +414,13 @@ TEST("test sections - failure in one leaf still allows siblings to run")
             {
                 SECTION("A")
                 {
-                    log.push_back("A");
+                    log.emplace_back("A");
                     CHECK(false);
                 }
 
                 SECTION("B")
                 {
-                    log.push_back("B");
+                    log.emplace_back("B");
                     CHECK(true);
                 }
             }
@@ -375,7 +429,7 @@ TEST("test sections - failure in one leaf still allows siblings to run")
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule);
 
-    std::vector<char const*> expected = {"A", "B"};
+    auto const expected = std::vector<std::string>{"A", "B"};
     CHECK(log == expected);
 
     CHECK(exec.count_total_tests() == 1);
@@ -386,7 +440,7 @@ TEST("test sections - failure in one leaf still allows siblings to run")
 
 TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
 {
-    std::vector<char const*> log;
+    std::vector<std::string> log;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -397,13 +451,13 @@ TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
             {
                 SECTION("throws")
                 {
-                    log.push_back("throws_enter");
+                    log.emplace_back("throws_enter");
                     throw std::runtime_error("test exception");
                 }
 
                 SECTION("ok")
                 {
-                    log.push_back("ok_enter");
+                    log.emplace_back("ok_enter");
                     CHECK(true);
                 }
             }
@@ -412,7 +466,10 @@ TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule);
 
-    std::vector<char const*> expected = {"throws_enter", "ok_enter"};
+    auto const expected = std::vector<std::string>{
+        "throws_enter",
+        "ok_enter",
+    };
     CHECK(log == expected);
 
     CHECK(exec.count_failed_tests() == 1);
@@ -474,7 +531,7 @@ TEST("test sections - nested conditionals with subsections active at different t
                     {
                         SECTION("X")
                         {
-                            log.push_back("i0/X");
+                            log.emplace_back("i0/X");
                             CHECK(true);
                         }
                     }
@@ -482,7 +539,7 @@ TEST("test sections - nested conditionals with subsections active at different t
                     {
                         SECTION("Y")
                         {
-                            log.push_back("i1/Y");
+                            log.emplace_back("i1/Y");
                             CHECK(true);
                         }
                     }
@@ -495,7 +552,10 @@ TEST("test sections - nested conditionals with subsections active at different t
 
     CHECK(counterRoot == 2);
 
-    std::vector<std::string> expected = {"i0/X", "i1/Y"};
+    auto const expected = std::vector<std::string>{
+        "i0/X",
+        "i1/Y",
+    };
     CHECK(log == expected);
 
     CHECK(exec.count_total_tests() == 1);

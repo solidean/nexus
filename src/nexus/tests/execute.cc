@@ -5,7 +5,6 @@
 
 #include <chrono>
 #include <memory>
-#include <queue>
 #include <string>
 #include <unordered_map>
 
@@ -65,7 +64,10 @@ void test_execute_begin(nx::test_execution& execution)
     g_context_stack.back().curr_section.push_back(g_context_stack.back().root_section.get());
 }
 
-void test_execute_end() { g_context_stack.pop_back(); }
+void test_execute_end()
+{
+    g_context_stack.pop_back();
+}
 
 // Operator to string conversion
 char const* op_to_string(impl::cmp_op op)
@@ -108,6 +110,7 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
             .name = std::move(name),
             .location = location,
         };
+    subsec->last_visited_in_exec = ctx.exec_count;
 
     // don't execute more sections if a leaf was already executed
     if (ctx.found_leaf)
@@ -127,7 +130,9 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
     return raii_section_opener(true);
 }
 
-nx::impl::raii_section_opener::raii_section_opener(bool is_opened) : _is_opened(is_opened) {}
+nx::impl::raii_section_opener::raii_section_opener(bool is_opened) : _is_opened(is_opened)
+{
+}
 
 nx::impl::raii_section_opener::~raii_section_opener()
 {
@@ -143,6 +148,11 @@ nx::impl::raii_section_opener::~raii_section_opener()
         {
             ctx.found_leaf = true;
             subsec.is_done = true;
+        }
+        else
+        {
+            // make sure parent knows that children have open sections
+            ctx.curr_section[ctx.curr_section.size() - 2]->next_open_section = subsec.next_open_section;
         }
 
         ctx.curr_section.pop_back();
@@ -186,9 +196,15 @@ void nx::impl::report_check_result(check_kind kind, cmp_op op, std::string expr,
     }
 }
 
-bool nx::test_execution::is_considered_failing() const { return failed_checks > 0 || failed_assertions > 0 || !errors.empty(); }
+bool nx::test_execution::is_considered_failing() const
+{
+    return failed_checks > 0 || failed_assertions > 0 || !errors.empty();
+}
 
-int nx::test_schedule_execution::count_total_tests() const { return static_cast<int>(executions.size()); }
+int nx::test_schedule_execution::count_total_tests() const
+{
+    return static_cast<int>(executions.size());
+}
 
 int nx::test_schedule_execution::count_failed_tests() const
 {
