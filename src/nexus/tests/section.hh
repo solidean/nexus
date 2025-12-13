@@ -30,4 +30,6 @@ raii_section_opener test_open_section(std::string name, std::source_location loc
 //   {
 //       CHECK(1 + 2 == 3);
 //   }
-#define SECTION(name, ...) if (auto _nx_raii_section = ::nx::impl::test_open_section(std::format(name, __VA_ARGS__), std::source_location::current()))
+#define SECTION(name, ...)    \
+    if (auto _nx_raii_section \
+        = ::nx::impl::test_open_section(std::format(name __VA_OPT__(, ) __VA_ARGS__), std::source_location::current()))

@@ -1,5 +1,7 @@
 #include "schedule.hh"
 
+#include <clean-core/assert.hh>
+
 nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, char** argv)
 {
     test_schedule_config config;
@@ -92,6 +94,8 @@ nx::test_schedule nx::test_schedule::create(test_schedule_config const& config, 
 
     for (auto const& decl : registry.declarations)
     {
+        CC_ASSERT(decl.function != nullptr, "invalid test decl");
+
         // Skip disabled tests unless explicitly requested
         if (!decl.test_config.enabled && !config.run_disabled_tests)
             continue;

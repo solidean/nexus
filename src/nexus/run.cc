@@ -4,6 +4,8 @@
 #include <nexus/tests/registry.hh>
 #include <nexus/tests/schedule.hh>
 
+#include <clean-core/assert.hh>
+
 #include <iostream>
 
 namespace
@@ -46,40 +48,38 @@ void print_catch2_execute_result(nx::test_schedule_execution const& execution)
 
     for (auto const& exec : execution.executions)
     {
-        if (exec.instance.declaration)
+        CC_ASSERT(exec.instance.declaration != nullptr, "test instance is invalid");
+        auto const& decl = *exec.instance.declaration;
+        bool const success = !exec.is_considered_failing();
+
+        std::cout << "  <TestCase name=\"" << decl.name << "\" ";
+        std::cout << "filename=\"" << decl.location.file_name() << "\" ";
+        std::cout << "line=\"" << decl.location.line() << "\">\n";
+
+        // If test failed, add error expressions (capped)
+        if (!success)
         {
-            auto const& decl = *exec.instance.declaration;
-            bool const success = !exec.is_considered_failing();
-
-            std::cout << "  <TestCase name=\"" << decl.name << "\" ";
-            std::cout << "filename=\"" << decl.location.file_name() << "\" ";
-            std::cout << "line=\"" << decl.location.line() << "\">\n";
-
-            // If test failed, add error expressions (max 10)
-            if (!success)
+            int const max_errors = 50;
+            int error_count = 0;
+            for (auto const& error : exec.errors)
             {
-                int const max_errors = 10;
-                int error_count = 0;
-                for (auto const& error : exec.errors)
-                {
-                    if (error_count >= max_errors)
-                        break;
+                if (error_count >= max_errors)
+                    break;
 
-                    std::cout << "    <Expression success=\"false\" ";
-                    std::cout << "filename=\"" << error.location.file_name() << "\" ";
-                    std::cout << "line=\"" << error.location.line() << "\">\n";
-                    std::cout << "      <Original>" << error.expr << "</Original>\n";
-                    std::cout << "      <Expanded>" << error.expanded << "</Expanded>\n";
-                    std::cout << "    </Expression>\n";
+                std::cout << "    <Expression success=\"false\" ";
+                std::cout << "filename=\"" << error.location.file_name() << "\" ";
+                std::cout << "line=\"" << error.location.line() << "\">\n";
+                std::cout << "      <Original>" << error.expr << "</Original>\n";
+                std::cout << "      <Expanded>" << error.expanded << "</Expanded>\n";
+                std::cout << "    </Expression>\n";
 
-                    ++error_count;
-                }
+                ++error_count;
             }
-
-            std::cout << "    <OverallResult success=\"" << (success ? "true" : "false") << "\" ";
-            std::cout << "durationInSeconds=\"" << exec.duration_seconds << "\"/>\n";
-            std::cout << "  </TestCase>\n";
         }
+
+        std::cout << "    <OverallResult success=\"" << (success ? "true" : "false") << "\" ";
+        std::cout << "durationInSeconds=\"" << exec.duration_seconds << "\"/>\n";
+        std::cout << "  </TestCase>\n";
     }
 
     std::cout << "</TestRun>\n";
@@ -149,7 +149,8 @@ int nx::run(int argc, char** argv)
                 auto const& decl = exec.instance.declaration;
                 if (decl)
                 {
-                    std::cerr << "  " << decl->name << " at " << decl->location.file_name() << ":" << decl->location.line() << "\n";
+                    std::cerr << "  " << decl->name << " at " << decl->location.file_name() << ":"
+                              << decl->location.line() << "\n";
                 }
             }
         }
