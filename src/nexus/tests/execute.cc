@@ -303,7 +303,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             catch (test_duplicate_section const& e)
             {
                 execution.errors.push_back(test_error{
-                    .expr = {},
+                    .expr = std::format("duplicate section: \"{}\"", e.name),
                     .location = e.location,
                     .extra_lines = {},
                     .expanded = std::format("duplicate section: \"{}\"", e.name),
@@ -313,7 +313,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             catch (std::exception const& e)
             {
                 execution.errors.push_back(test_error{
-                    .expr = {},
+                    .expr = std::format("uncaught exception: {}", e.what()),
                     .location = instance.declaration->location,
                     .extra_lines = {},
                     .expanded = std::format("uncaught exception: {}", e.what()),
@@ -322,7 +322,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             catch (...)
             {
                 execution.errors.push_back(test_error{
-                    .expr = {},
+                    .expr = "uncaught unknown exception",
                     .location = instance.declaration->location,
                     .extra_lines = {},
                     .expanded = "uncaught unknown exception",
@@ -350,7 +350,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             g_context_stack.back().root_section->collect_not_done_sections(unreachable_sections);
             for (auto const& sec : unreachable_sections)
                 execution.errors.push_back(test_error{
-                    .expr = "",
+                    .expr = "unreachable section",
                     .location = sec->location,
                     .extra_lines = {},
                     .expanded = std::format("section \"{}\" was discovered but unreachable", sec->name),
@@ -365,7 +365,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
         if (execution.executed_checks == 0)
         {
             execution.errors.push_back(test_error{
-                .expr = "",
+                .expr = "test did not contain CHECK/REQUIRE",
                 .location = instance.declaration->location,
                 .extra_lines = {"This is often a bug and can be silenced via CHECK(true)"},
                 .expanded = "test did not contain CHECK/REQUIRE",

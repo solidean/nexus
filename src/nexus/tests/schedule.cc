@@ -74,10 +74,10 @@ nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, ch
     }
 
     // Enable Catch2 XML discovery mode if all three flags are present
-    config.is_catch2_xml_discovery = has_verbosity && has_list_tests && has_xml_reporter;
+    config.is_catch2_xml_discovery = has_list_tests && has_xml_reporter;
 
     // Enable Catch2 XML results reporting if durations + xml reporter (and not list tests)
-    config.report_catch2_xml_results = has_durations && has_xml_reporter && !has_list_tests;
+    config.report_catch2_xml_results = has_xml_reporter && !has_list_tests;
 
     // If filters are provided with non-wildcard matches, enable running disabled tests
     if (!config.filters.empty())
