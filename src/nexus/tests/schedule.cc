@@ -79,6 +79,21 @@ nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, ch
     // Enable Catch2 XML results reporting if durations + xml reporter (and not list tests)
     config.report_catch2_xml_results = has_xml_reporter && !has_list_tests;
 
+    // Normalize filters for Catch2 compatibility (postprocess)
+    if (config.is_catch2_xml_discovery || config.report_catch2_xml_results)
+    {
+        for (auto& filter : config.filters)
+        {
+            // Replace \[ with [ (Catch2 escapes square brackets)
+            size_t pos = 0;
+            while ((pos = filter.find("\\[", pos)) != std::string::npos)
+            {
+                filter.replace(pos, 2, "[");
+                pos += 1;
+            }
+        }
+    }
+
     // If filters are provided with non-wildcard matches, enable running disabled tests
     if (!config.filters.empty())
     {
