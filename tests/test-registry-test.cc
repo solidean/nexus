@@ -17,7 +17,7 @@ TEST("test registry - basics")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(exec.count_total_tests() == 1);
     CHECK(exec.count_total_checks() == 1);
@@ -55,7 +55,7 @@ TEST("test registry - multi-test multi-check accounting")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(exec.count_total_tests() == 3);
     CHECK(exec.count_total_checks() == 7);
@@ -77,7 +77,7 @@ TEST("test registry - CHECK continues after failure")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Verify continuation happened
     CHECK(counter == 1);
@@ -103,7 +103,7 @@ TEST("test registry - REQUIRE aborts test on failure")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Verify abort happened
     CHECK(counter == 0);
@@ -138,7 +138,7 @@ TEST("test registry - disabled tests are not executed")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Only enabled test executed
     CHECK(counter == 1);
@@ -176,7 +176,7 @@ TEST("test registry - config via aggregate literal vs merge_config are equivalen
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Both disabled, neither executed
     CHECK(counter_a == 0);
@@ -201,7 +201,7 @@ TEST("test registry - seed configuration is stored")
     reg.add_declaration("T_seed_13", nx::config::cfg{.enabled = true, .seed = 13}, [] { CHECK(true); });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Verify seeds are stored in declarations
     CHECK(reg.declarations[0].test_config.seed == 42);
@@ -229,7 +229,7 @@ TEST("test registry - uncaught exceptions become failing tests")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(exec.count_total_tests() == 2);
     CHECK(exec.count_total_checks() == 2); // both CHECKs counted
@@ -252,7 +252,7 @@ TEST("test registry - failure attribution with mixed CHECK and REQUIRE")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(exec.count_total_tests() == 1);
     CHECK(exec.count_total_checks() == 3);  // 2 CHECKs + 1 REQUIRE
@@ -283,7 +283,7 @@ TEST("test registry - duplicate test names are both registered")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Both tests run (framework allows duplicate names)
     CHECK(counter_a == 1);
@@ -317,7 +317,7 @@ TEST("test registry - test with zero checks is counted as a test")
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     // Both tests run
     CHECK(counter_empty == 1);
@@ -354,7 +354,7 @@ TEST("test registry - schedule integration with run_disabled_tests config")
     // Schedule without run_disabled_tests
     {
         auto schedule = nx::test_schedule::create({.run_disabled_tests = false}, reg);
-        auto exec = nx::execute_tests(schedule);
+        auto exec = nx::execute_tests(schedule, {});
 
         CHECK(counter_enabled == 1);
         CHECK(counter_disabled == 0);
@@ -368,7 +368,7 @@ TEST("test registry - schedule integration with run_disabled_tests config")
     // Schedule with run_disabled_tests
     {
         auto schedule = nx::test_schedule::create({.run_disabled_tests = true}, reg);
-        auto exec = nx::execute_tests(schedule);
+        auto exec = nx::execute_tests(schedule, {});
 
         CHECK(counter_enabled == 1);
         CHECK(counter_disabled == 1); // now runs

@@ -37,7 +37,7 @@ TEST("test sections - basics")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterA == 2);
     CHECK(counterB == 1);
@@ -79,7 +79,7 @@ TEST("test sections - basics nested")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterA == 2);
     CHECK(counterB == 1);
@@ -151,7 +151,7 @@ TEST("test sections - canonical preorder + counts on a richer tree")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterRoot == 4);
     CHECK(counterA == 2);
@@ -199,7 +199,7 @@ TEST("test sections - distinct dynamic sections in a loop, preorder stable")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterRoot == N);
 
@@ -245,7 +245,7 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterRoot == 2 * N);
 
@@ -305,7 +305,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterRoot == 3);
 
@@ -356,7 +356,7 @@ TEST("test sections - discovered-but-vanishing subsection => failure but no infi
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(visitsOuter == 2);
     CHECK(visitsOnce == 1);
@@ -392,7 +392,7 @@ TEST("test sections - duplicate sibling section names => immediate error")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(first == 1);
     CHECK(second == 0);
@@ -427,7 +427,7 @@ TEST("test sections - failure in one leaf still allows siblings to run")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     auto const expected = std::vector<std::string>{"A", "B"};
     CHECK(log == expected);
@@ -464,7 +464,7 @@ TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     auto const expected = std::vector<std::string>{
         "throws_enter",
@@ -502,7 +502,7 @@ TEST("test sections - early-abort-style macro (REQUIRE) terminates path but not 
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(afterRequire == 0);
     CHECK(visitedOk == 0); // NOTE: for now, siblings might be visited
@@ -548,7 +548,7 @@ TEST("test sections - nested conditionals with subsections active at different t
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
-    auto exec = nx::execute_tests(schedule);
+    auto exec = nx::execute_tests(schedule, {});
 
     CHECK(counterRoot == 2);
 

@@ -6,6 +6,8 @@
 #include <clean-core/assert.hh>
 
 #include <chrono>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -245,9 +247,14 @@ int nx::test_schedule_execution::count_failed_checks() const
     return failed;
 }
 
-nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
+nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, test_schedule_config const& config)
 {
     test_schedule_execution result;
+
+    if (config.verbose)
+    {
+        std::cout << "executing " << schedule.instances.size() << " tests\n" << std::flush;
+    }
 
     for (auto const& instance : schedule.instances)
     {
@@ -263,6 +270,7 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
         auto const start_time = std::chrono::high_resolution_clock::now();
 
         // Execute the test function if it exists
+        int section_num = 0;
         while (true)
         {
             // CAUTION: a test is allowed to run nested tests, thus growing the context stack here
@@ -272,6 +280,16 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
                 ctx.found_leaf = false;
                 ctx.root_section->next_open_section = nullptr;
             }
+
+            if (config.verbose)
+            {
+                if (section_num == 0)
+                    std::cout << "  - start \"" << instance.declaration->name << "\"\n" << std::flush;
+                else
+                    std::cout << "  - start \"" << instance.declaration->name << "\" section " << section_num << '\n'
+                              << std::flush;
+            }
+            section_num++;
 
             try
             {
@@ -352,6 +370,15 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule)
                 .extra_lines = {"This is often a bug and can be silenced via CHECK(true)"},
                 .expanded = "test did not contain CHECK/REQUIRE",
             });
+        }
+
+        if (config.verbose)
+        {
+            double const duration_ms = execution.duration_seconds * 1000.0;
+            std::cout << "    ... in " << std::fixed << std::setprecision(2) << duration_ms << " ms ("
+                      << execution.executed_checks << " checks, " << execution.failed_assertions << " asserts, "
+                      << execution.failed_checks << " failed checks, " << execution.errors.size() << " errors)\n"
+                      << std::flush;
         }
 
         result.executions.push_back(std::move(execution));

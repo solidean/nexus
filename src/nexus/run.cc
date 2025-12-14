@@ -122,8 +122,14 @@ int nx::run(int argc, char** argv)
         return 1;
     }
 
+    if (config.verbose)
+    {
+        schedule.print();
+        std::cout << std::endl; // NOLINT
+    }
+
     // Execute the scheduled tests
-    auto execution = execute_tests(schedule);
+    auto execution = execute_tests(schedule, config);
 
     // Handle Catch2 XML results reporting for TestMate integration
     if (config.report_catch2_xml_results)

@@ -18,6 +18,7 @@ struct test_schedule_config
     bool run_disabled_tests = false;
     bool is_catch2_xml_discovery = false;
     bool report_catch2_xml_results = false;
+    bool verbose = false;
 
     static test_schedule_config create_from_args(int argc, char** argv);
 };
@@ -27,6 +28,8 @@ struct test_schedule
     std::vector<test_instance> instances;
 
     static test_schedule create(test_schedule_config const& config, test_registry const& registry);
+
+    void print() const;
 };
 
 } // namespace nx

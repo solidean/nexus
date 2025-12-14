@@ -2,6 +2,8 @@
 
 #include <clean-core/assert.hh>
 
+#include <iostream>
+
 nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, char** argv)
 {
     test_schedule_config config;
@@ -17,8 +19,14 @@ nx::test_schedule_config nx::test_schedule_config::create_from_args(int argc, ch
     {
         std::string const arg = argv[i];
 
+        // Check for simple verbose flag
+        if (arg == "-v")
+        {
+            config.verbose = true;
+            continue;
+        }
         // Check for Catch2 compatibility flags (don't add to filters)
-        if (arg == "--verbosity")
+        else if (arg == "--verbosity")
         {
             has_verbosity = true;
             // Skip the next argument (verbosity level)
@@ -128,4 +136,13 @@ nx::test_schedule nx::test_schedule::create(test_schedule_config const& config, 
     }
 
     return schedule;
+}
+
+void nx::test_schedule::print() const
+{
+    std::cout << "test schedule:\n";
+    for (auto const& instance : instances)
+    {
+        std::cout << "  - \"" << instance.declaration->name << "\"\n";
+    }
 }

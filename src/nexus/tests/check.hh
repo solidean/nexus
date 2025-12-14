@@ -1,12 +1,13 @@
 #pragma once
 
+#include <clean-core/string.hh>
+#include <clean-core/to_debug_string.hh>
+
 #include <source_location>
 #include <type_traits>
 
 // TODO: remove once cc is far enough again
-#include <format>
 #include <memory>
-#include <string>
 
 namespace nx::impl
 {
@@ -127,13 +128,13 @@ struct check_handle final
 
     ~check_handle() noexcept(false);
 
-    check_handle context(char const* msg) &&;
-    check_handle note(char const* msg) &&;
+    check_handle context(cc::string msg) &&;
+    check_handle note(cc::string msg) &&;
 
     template <class T>
-    check_handle dump(char const* label, T const& value) &&
+    check_handle dump(cc::string_view label, T const& value) &&
     {
-        return std::move(*this).add_extra_line(std::format("{}: {}", label, value));
+        return std::move(*this).add_extra_line(std::format("{}: {}", label, cc::to_debug_string(value)));
     }
 
     // 2 dumps is used for CHECK(lhs op rhs)
@@ -141,7 +142,7 @@ struct check_handle final
     template <class T>
     check_handle dump(T const& value) &&
     {
-        return std::move(*this).add_extra_line(std::format("{}", value));
+        return std::move(*this).add_extra_line(cc::to_debug_string(value));
     }
 
     static check_handle make(check_kind kind, cmp_op op, char const* expr_text, bool passed, std::source_location loc);
@@ -152,7 +153,10 @@ private:
 
 // Factory function for check_handle
 template <class L, class R>
-check_handle make_check_handle(check_kind kind, char const* expr_text, binary_expr_capture<L, R> const& expr, std::source_location loc)
+check_handle make_check_handle(check_kind kind,
+                               char const* expr_text,
+                               binary_expr_capture<L, R> const& expr,
+                               std::source_location loc)
 {
     return check_handle::make(kind, expr.op, expr_text, expr.passed, loc) //
         .dump(expr.lhs)                                                   //
@@ -171,9 +175,11 @@ check_handle make_check_handle(check_kind kind, char const* expr_text, lhs_holde
 } // namespace nx::impl
 
 // CHECK macro
-#define CHECK(Expr) \
-    ::nx::impl::make_check_handle(::nx::impl::check_kind::check, #Expr, ::nx::impl::lhs_grab{} <=> Expr, std::source_location::current())
+#define CHECK(Expr)                                                                                      \
+    ::nx::impl::make_check_handle(::nx::impl::check_kind::check, #Expr, ::nx::impl::lhs_grab{} <=> Expr, \
+                                  std::source_location::current())
 
 // REQUIRE macro
-#define REQUIRE(Expr) \
-    ::nx::impl::make_check_handle(::nx::impl::check_kind::require, #Expr, ::nx::impl::lhs_grab{} <=> Expr, std::source_location::current())
+#define REQUIRE(Expr)                                                                                      \
+    ::nx::impl::make_check_handle(::nx::impl::check_kind::require, #Expr, ::nx::impl::lhs_grab{} <=> Expr, \
+                                  std::source_location::current())

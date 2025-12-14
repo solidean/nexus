@@ -15,7 +15,11 @@ struct nx::impl::check_handle::impl_context
     std::vector<std::string> extra_lines;
 };
 
-nx::impl::check_handle nx::impl::check_handle::make(check_kind kind, cmp_op op, char const* expr_text, bool passed, std::source_location loc)
+nx::impl::check_handle nx::impl::check_handle::make(check_kind kind,
+                                                    cmp_op op,
+                                                    char const* expr_text,
+                                                    bool passed,
+                                                    std::source_location loc)
 {
     check_handle handle;
     handle.ctx = std::make_unique<impl_context>(impl_context{
@@ -32,7 +36,8 @@ nx::impl::check_handle::~check_handle() noexcept(false)
 {
     if (ctx)
     {
-        nx::impl::report_check_result(ctx->kind, ctx->op, std::move(ctx->expr_text), ctx->passed, std::move(ctx->extra_lines), ctx->location);
+        nx::impl::report_check_result(ctx->kind, ctx->op, std::move(ctx->expr_text), ctx->passed,
+                                      std::move(ctx->extra_lines), ctx->location);
     }
 }
 
@@ -42,9 +47,12 @@ nx::impl::check_handle nx::impl::check_handle::add_extra_line(std::string line) 
     return std::move(*this);
 }
 
-nx::impl::check_handle nx::impl::check_handle::context(char const* msg) &&
+nx::impl::check_handle nx::impl::check_handle::context(cc::string msg) &&
 {
     return std::move(*this).add_extra_line(std::format("context: {}", msg));
 }
 
-nx::impl::check_handle nx::impl::check_handle::note(char const* msg) && { return std::move(*this).add_extra_line(std::format("note: {}", msg)); }
+nx::impl::check_handle nx::impl::check_handle::note(cc::string msg) &&
+{
+    return std::move(*this).add_extra_line(std::format("note: {}", msg));
+}
