@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+// MIGRATE ME
 struct nx::impl::check_handle::impl_context
 {
     check_kind kind;
@@ -36,23 +37,26 @@ nx::impl::check_handle::~check_handle() noexcept(false)
 {
     if (ctx)
     {
+        // MIGRATE ME
         nx::impl::report_check_result(ctx->kind, ctx->op, std::move(ctx->expr_text), ctx->passed,
                                       std::move(ctx->extra_lines), ctx->location);
     }
 }
 
-nx::impl::check_handle nx::impl::check_handle::add_extra_line(std::string line) &&
+nx::impl::check_handle nx::impl::check_handle::add_extra_line(cc::string line) &&
 {
-    ctx->extra_lines.push_back(std::move(line));
+    ctx->extra_lines.push_back(std::string(line.data(), line.size()));
     return std::move(*this);
 }
 
 nx::impl::check_handle nx::impl::check_handle::context(cc::string msg) &&
 {
-    return std::move(*this).add_extra_line(std::format("context: {}", msg));
+    // MIGRATE ME
+    return std::move(*this).add_extra_line(std::format("context: {}", msg.c_str_materialize()));
 }
 
 nx::impl::check_handle nx::impl::check_handle::note(cc::string msg) &&
 {
-    return std::move(*this).add_extra_line(std::format("note: {}", msg));
+    // MIGRATE ME
+    return std::move(*this).add_extra_line(std::format("note: {}", msg.c_str_materialize()));
 }

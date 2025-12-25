@@ -148,7 +148,7 @@ struct check_handle final
     static check_handle make(check_kind kind, cmp_op op, char const* expr_text, bool passed, std::source_location loc);
 
 private:
-    check_handle add_extra_line(std::string line) &&;
+    check_handle add_extra_line(cc::string line) &&;
 };
 
 // Factory function for check_handle
