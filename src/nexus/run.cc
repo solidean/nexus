@@ -10,6 +10,27 @@
 
 namespace
 {
+std::string xml_escape(std::string_view str)
+{
+    std::string result;
+    result.reserve(str.size());
+
+    for (auto c : str)
+    {
+        switch (c)
+        {
+        case '<': result += "&lt;"; break;
+        case '>': result += "&gt;"; break;
+        case '&': result += "&amp;"; break;
+        case '"': result += "&quot;"; break;
+        case '\'': result += "&apos;"; break;
+        default: result += c; break;
+        }
+    }
+
+    return result;
+}
+
 void print_help()
 {
     std::cout << "nexus - Unified test, fuzz, benchmark, and app runner for modern C++\n\n";
@@ -28,11 +49,11 @@ void print_catch2_xml_discovery(nx::test_registry const& registry)
     for (auto const& decl : registry.declarations)
     {
         std::cout << "  <TestCase>\n";
-        std::cout << "    <Name>" << decl.name << "</Name>\n";
+        std::cout << "    <Name>" << xml_escape(decl.name) << "</Name>\n";
         std::cout << "    <ClassName/>\n";
         std::cout << "    <Tags></Tags>\n";
         std::cout << "    <SourceInfo>\n";
-        std::cout << "      <File>" << decl.location.file_name() << "</File>\n";
+        std::cout << "      <File>" << xml_escape(decl.location.file_name()) << "</File>\n";
         std::cout << "      <Line>" << decl.location.line() << "</Line>\n";
         std::cout << "    </SourceInfo>\n";
         std::cout << "  </TestCase>\n";
@@ -52,8 +73,8 @@ void print_catch2_execute_result(nx::test_schedule_execution const& execution)
         auto const& decl = *exec.instance.declaration;
         bool const success = !exec.is_considered_failing();
 
-        std::cout << "  <TestCase name=\"" << decl.name << "\" ";
-        std::cout << "filename=\"" << decl.location.file_name() << "\" ";
+        std::cout << "  <TestCase name=\"" << xml_escape(decl.name) << "\" ";
+        std::cout << "filename=\"" << xml_escape(decl.location.file_name()) << "\" ";
         std::cout << "line=\"" << decl.location.line() << "\">\n";
 
         // If test failed, add error expressions (capped)
@@ -67,10 +88,10 @@ void print_catch2_execute_result(nx::test_schedule_execution const& execution)
                     break;
 
                 std::cout << "    <Expression success=\"false\" ";
-                std::cout << "filename=\"" << error.location.file_name() << "\" ";
+                std::cout << "filename=\"" << xml_escape(error.location.file_name()) << "\" ";
                 std::cout << "line=\"" << error.location.line() << "\">\n";
-                std::cout << "      <Original>" << error.expr << "</Original>\n";
-                std::cout << "      <Expanded>" << error.expanded << "</Expanded>\n";
+                std::cout << "      <Original>" << xml_escape(error.expr) << "</Original>\n";
+                std::cout << "      <Expanded>" << xml_escape(error.expanded) << "</Expanded>\n";
                 std::cout << "    </Expression>\n";
 
                 ++error_count;
