@@ -118,6 +118,16 @@ void print_section_recursive(nx::test_execution::section const& sec,
 
 void print_catch2_execute_result(nx::test_schedule_execution const& execution)
 {
+    // TODO(catch2-xml):
+    // - Emit captured StdOut / StdErr elements (useful for failure diagnostics and hung tests).
+    // - Support INFO/CAPTURE-style contextual messages in XML, not just failed expressions.
+    // - Model partial test-case runs (SECTION re-entry / partNumber) instead of only a merged section tree.
+    // - Add benchmark result reporting hooks (even if unimplemented for now).
+    // - Include run metadata (run name, RNG seed) for reproducibility/debugging.
+    // - Track and emit expectedFailures properly instead of hardcoding 0.
+    // - Fill discovery <Tags> from declarations (tag filtering is a core Catch2 feature).
+    // - Consider emitting explicit “test/section started” progress lines (stderr) for live IDE feedback.
+
     std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     std::cout << "<TestRun>\n";
 
