@@ -3,6 +3,7 @@
 #include <nexus/tests/check.hh>
 #include <nexus/tests/section.hh>
 
+#include <clean-core/assert-handler.hh>
 #include <clean-core/assert.hh>
 
 #include <chrono>
@@ -20,19 +21,76 @@ namespace
 struct test_section
 {
     std::unordered_map<std::string, std::unique_ptr<test_section>> subsections;
+    std::vector<test_section*> subsections_ordered;
+
     test_section* next_open_section = nullptr;
     bool is_done = false;
     int last_visited_in_exec = -1;
     std::source_location location;
     std::string name;
 
-    void collect_not_done_sections(std::vector<test_section const*>& secs) const
-    {
-        if (!is_done)
-            secs.push_back(this);
+    // associated stats
+    int executed_checks = 0;
+    int failed_checks = 0;
+    std::vector<test_error> errors;
+    double duration_seconds = 0.0;
 
-        for (auto const& kvp : subsections)
-            kvp.second->collect_not_done_sections(secs);
+    // accumulates stats for non-leaf sections
+    // adds errors for "no checks" and "unreachable subsections"
+    // computes "in_considered_failing"
+    // populates the result with that
+    void finalize_section_to(test_execution::section& sec) const
+    {
+        sec.name = name;
+        sec.location = location;
+        sec.is_considered_failing = false;
+        sec.executed_checks = executed_checks;
+        sec.failed_checks = failed_checks;
+        sec.errors = errors;
+        sec.duration_seconds = duration_seconds;
+
+        // populate and aggregate subsections
+        for (auto subsec : subsections_ordered)
+        {
+            auto& ssec = sec.subsections.emplace_back();
+            subsec->finalize_section_to(ssec);
+
+            // accumulate
+            sec.executed_checks += ssec.executed_checks;
+            sec.failed_checks += ssec.failed_checks;
+            sec.duration_seconds += ssec.duration_seconds;
+            for (auto const& e : ssec.errors)
+                sec.errors.push_back(e);
+            sec.is_considered_failing |= ssec.is_considered_failing;
+
+            // unreachable section
+            if (is_done && !subsec->is_done)
+            {
+                sec.errors.push_back(test_error{
+                    .expr = "unreachable section",
+                    .location = subsec->location,
+                    .extra_lines = {},
+                    .expanded = std::format("section \"{}\" was discovered but unreachable from parent", subsec->name),
+                });
+                sec.is_considered_failing = true;
+            }
+        }
+
+        // we record missing CHECK/REQUIRE for _all_ sections, even intermediate ones
+        if (sec.executed_checks == 0)
+        {
+            sec.errors.push_back(test_error{
+                .expr = "no CHECK/REQUIRE",
+                .location = location,
+                .extra_lines = {"This is often a bug and can be silenced via CHECK(true)"},
+                .expanded = "test did not contain CHECK/REQUIRE",
+            });
+            sec.is_considered_failing = true;
+        }
+
+        // final checks
+        sec.is_considered_failing |= sec.failed_checks > 0;
+        sec.is_considered_failing |= !errors.empty();
     }
 };
 
@@ -41,8 +99,17 @@ struct test_context
     nx::test_execution* execution = nullptr;
     std::unique_ptr<test_section> root_section;
     std::vector<test_section*> curr_section;
+
+    // current stats
+    int executed_checks = 0;
+    int failed_checks = 0;
+    std::vector<test_error> errors;
+
+    // the first section we close becomes the current "leaf" section
+    // after a run, all checks & errors are associated to the current leaf
+    test_section* leaf_section = nullptr;
+
     int exec_count = 0;
-    bool found_leaf = false;
 };
 
 // Exception thrown when a REQUIRE fails
@@ -71,6 +138,12 @@ void test_execute_begin(nx::test_execution& execution)
 void test_execute_end()
 {
     CC_ASSERT(!g_context_stack.empty(), "should be properly balanced");
+
+    auto& ctx = g_context_stack.back();
+    CC_ASSERT(ctx.execution != nullptr, "should always have a valid execution");
+
+    ctx.root_section->finalize_section_to(ctx.execution->root);
+
     g_context_stack.pop_back();
 }
 
@@ -107,6 +180,7 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
         subsec = std::make_unique<test_section>();
         subsec->name = name;
         subsec->location = location;
+        curr_sec.subsections_ordered.push_back(subsec.get());
     }
 
     // section opened twice in the same run
@@ -118,7 +192,7 @@ nx::impl::raii_section_opener nx::impl::test_open_section(std::string name, std:
     subsec->last_visited_in_exec = ctx.exec_count;
 
     // don't execute more sections if a leaf was already executed
-    if (ctx.found_leaf)
+    if (ctx.leaf_section != nullptr)
     {
         // but note down that parent could continue here
         curr_sec.next_open_section = subsec.get();
@@ -153,7 +227,8 @@ nx::impl::raii_section_opener::~raii_section_opener()
         // also applies to our way back up
         if (subsec.next_open_section == nullptr)
         {
-            ctx.found_leaf = true;
+            if (ctx.leaf_section == nullptr)
+                ctx.leaf_section = &subsec;
             subsec.is_done = true;
         }
         else
@@ -176,26 +251,24 @@ void nx::impl::report_check_result(check_kind kind,
     if (g_context_stack.empty())
         return; // No active test context
 
-    auto* execution = g_context_stack.back().execution;
-    if (!execution)
-        return;
+    auto& ctx = g_context_stack.back();
 
     // Increment executed checks
-    ++execution->executed_checks;
+    ++ctx.executed_checks;
 
     // If the check failed, record it
     if (!passed)
     {
-        ++execution->failed_checks;
+        ++ctx.failed_checks;
 
         std::string expanded;
         if (op == cmp_op::none)
-            expanded = std::format("is: {}", extra_lines[0]);
+            expanded = std::format("'{}' failed", expr);
         else
-            expanded = std::format("is: {} {} {}", extra_lines[0], op_to_string(op), extra_lines[1]);
+            expanded = std::format("{} {} {}", extra_lines[0], op_to_string(op), extra_lines[1]);
 
         // Add test error
-        execution->errors.push_back(test_error{
+        ctx.errors.push_back(test_error{
             .expr = std::move(expr),
             .location = location,
             .extra_lines = std::move(extra_lines),
@@ -210,7 +283,7 @@ void nx::impl::report_check_result(check_kind kind,
 
 bool nx::test_execution::is_considered_failing() const
 {
-    return failed_checks > 0 || failed_assertions > 0 || !errors.empty();
+    return root.is_considered_failing;
 }
 
 int nx::test_schedule_execution::count_total_tests() const
@@ -235,7 +308,7 @@ int nx::test_schedule_execution::count_total_checks() const
 {
     int total = 0;
     for (auto const& exec : executions)
-        total += exec.executed_checks;
+        total += exec.root.executed_checks;
     return total;
 }
 
@@ -243,7 +316,7 @@ int nx::test_schedule_execution::count_failed_checks() const
 {
     int failed = 0;
     for (auto const& exec : executions)
-        failed += exec.failed_checks;
+        failed += exec.root.failed_checks;
     return failed;
 }
 
@@ -266,18 +339,16 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
         // Set up test context for check reporting
         test_execute_begin(execution);
 
-        // Measure test execution time
-        auto const start_time = std::chrono::high_resolution_clock::now();
-
         // Execute the test function if it exists
-        int section_num = 0;
-        while (true)
+        auto section_num = 0;
+        auto should_continue = true;
+        while (should_continue)
         {
             // CAUTION: a test is allowed to run nested tests, thus growing the context stack here
             {
                 auto& ctx = g_context_stack.back();
                 ctx.exec_count++;
-                ctx.found_leaf = false;
+                ctx.leaf_section = nullptr;
                 ctx.root_section->next_open_section = nullptr;
             }
 
@@ -290,9 +361,18 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
                               << std::flush;
             }
             section_num++;
+            auto const t_section_start = std::chrono::high_resolution_clock::now();
 
             try
             {
+                auto _ = cc::impl::scoped_assertion_handler(
+                    [](cc::impl::assertion_info const& info)
+                    {
+                        // failing assertion has same semantics as REQUIRE -> it aborts
+                        nx::impl::report_check_result(impl::check_kind::require, impl::cmp_op::none, info.expression,
+                                                      false, {info.message}, info.location);
+                    });
+
                 (*instance.declaration->function)();
             }
             catch (test_require_failed const&) // NOLINT(bugprone-empty-catch)
@@ -302,17 +382,17 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             }
             catch (test_duplicate_section const& e)
             {
-                execution.errors.push_back(test_error{
+                g_context_stack.back().errors.push_back(test_error{
                     .expr = std::format("duplicate section: \"{}\"", e.name),
                     .location = e.location,
                     .extra_lines = {},
                     .expanded = std::format("duplicate section: \"{}\"", e.name),
                 });
-                break; // wrong use of test framework
+                should_continue = false; // wrong use of test framework
             }
             catch (std::exception const& e)
             {
-                execution.errors.push_back(test_error{
+                g_context_stack.back().errors.push_back(test_error{
                     .expr = std::format("uncaught exception: {}", e.what()),
                     .location = instance.declaration->location,
                     .extra_lines = {},
@@ -321,12 +401,26 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             }
             catch (...)
             {
-                execution.errors.push_back(test_error{
+                g_context_stack.back().errors.push_back(test_error{
                     .expr = "uncaught unknown exception",
                     .location = instance.declaration->location,
                     .extra_lines = {},
                     .expanded = "uncaught unknown exception",
                 });
+            }
+
+            // associate stats & errors with leaf
+            auto sec = g_context_stack.back().leaf_section;
+            if (sec == nullptr)
+                sec = g_context_stack.back().root_section.get();
+            CC_ASSERT(sec != nullptr, "should always have a leaf section");
+            {
+                auto& ctx = g_context_stack.back();
+                auto const t_section_end = std::chrono::high_resolution_clock::now();
+                sec->duration_seconds = std::chrono::duration<double>(t_section_end - t_section_start).count();
+                sec->executed_checks = cc::exchange(ctx.executed_checks, 0);
+                sec->failed_checks = cc::exchange(ctx.failed_checks, 0);
+                sec->errors = cc::exchange(ctx.errors, {});
             }
 
             // no new sections to execute? we're done
@@ -335,49 +429,22 @@ nx::test_schedule_execution nx::execute_tests(test_schedule const& schedule, tes
             {
                 // so it's not marked as unreachable
                 g_context_stack.back().root_section->is_done = true;
-                break;
+
+                // .. and we're done!
+                should_continue = false;
             }
-        }
-
-        // Calculate duration
-        auto const end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> const duration = end_time - start_time;
-        execution.duration_seconds = duration.count();
-
-        // Check for unreachable sections
-        {
-            std::vector<test_section const*> unreachable_sections;
-            g_context_stack.back().root_section->collect_not_done_sections(unreachable_sections);
-            for (auto const& sec : unreachable_sections)
-                execution.errors.push_back(test_error{
-                    .expr = "unreachable section",
-                    .location = sec->location,
-                    .extra_lines = {},
-                    .expanded = std::format("section \"{}\" was discovered but unreachable", sec->name),
-                });
         }
 
         // Clean up test context
         test_execute_end();
 
-        // Check if test contained any checks
-        // TODO: check for each section
-        if (execution.executed_checks == 0)
-        {
-            execution.errors.push_back(test_error{
-                .expr = "test did not contain CHECK/REQUIRE",
-                .location = instance.declaration->location,
-                .extra_lines = {"This is often a bug and can be silenced via CHECK(true)"},
-                .expanded = "test did not contain CHECK/REQUIRE",
-            });
-        }
-
         if (config.verbose)
         {
-            double const duration_ms = execution.duration_seconds * 1000.0;
+            double const duration_ms = execution.root.duration_seconds * 1000.0;
             std::cout << "    ... in " << std::fixed << std::setprecision(2) << duration_ms << " ms ("
-                      << execution.executed_checks << " checks, " << execution.failed_assertions << " asserts, "
-                      << execution.failed_checks << " failed checks, " << execution.errors.size() << " errors)\n"
+                      << execution.root.executed_checks << " checks, "      //
+                      << execution.root.failed_checks << " failed checks, " //
+                      << execution.root.errors.size() << " errors)\n"
                       << std::flush;
         }
 

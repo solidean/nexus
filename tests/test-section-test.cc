@@ -1,5 +1,4 @@
 #include <nexus/test.hh>
-#include <nexus/tests/config.hh>
 #include <nexus/tests/execute.hh>
 #include <nexus/tests/registry.hh>
 #include <nexus/tests/schedule.hh>
@@ -12,36 +11,36 @@
 
 TEST("test sections - basics")
 {
-    int counterA = 0;
-    int counterB = 0;
-    int counterC = 0;
+    int counter_a = 0;
+    int counter_b = 0;
+    int counter_c = 0;
 
     nx::test_registry reg;
     reg.add_declaration( //
         "testA", {},
         [&]
         {
-            counterA++;
+            counter_a++;
 
             SECTION("sec A")
             {
-                counterB++;
-                CHECK(true);
+                counter_b++;
+                SUCCEED();
             }
 
             SECTION("sec B")
             {
-                counterC++;
-                CHECK(true);
+                counter_c++;
+                SUCCEED();
             }
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterA == 2);
-    CHECK(counterB == 1);
-    CHECK(counterC == 1);
+    CHECK(counter_a == 2);
+    CHECK(counter_b == 1);
+    CHECK(counter_c == 1);
 
     CHECK(exec.count_total_tests() == 1);
     CHECK(exec.count_total_checks() == 2);
@@ -51,9 +50,9 @@ TEST("test sections - basics")
 
 TEST("test sections - basics nested")
 {
-    int counterA = 0;
-    int counterB = 0;
-    int counterC = 0;
+    int counter_a = 0;
+    int counter_b = 0;
+    int counter_c = 0;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -62,18 +61,18 @@ TEST("test sections - basics nested")
         {
             SECTION("outer")
             {
-                counterA++;
+                counter_a++;
 
                 SECTION("sec A")
                 {
-                    counterB++;
-                    CHECK(true);
+                    counter_b++;
+                    SUCCEED();
                 }
 
                 SECTION("sec B")
                 {
-                    counterC++;
-                    CHECK(true);
+                    counter_c++;
+                    SUCCEED();
                 }
             }
         });
@@ -81,9 +80,9 @@ TEST("test sections - basics nested")
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterA == 2);
-    CHECK(counterB == 1);
-    CHECK(counterC == 1);
+    CHECK(counter_a == 2);
+    CHECK(counter_b == 1);
+    CHECK(counter_c == 1);
 
     CHECK(exec.count_total_tests() == 1);
     CHECK(exec.count_total_checks() == 2);
@@ -93,13 +92,13 @@ TEST("test sections - basics nested")
 
 TEST("test sections - canonical preorder + counts on a richer tree")
 {
-    int counterRoot = 0;
-    int counterA = 0;
-    int counterA1 = 0;
-    int counterA2 = 0;
-    int counterB = 0;
-    int counterB1 = 0;
-    int counterC = 0;
+    int counter_root = 0;
+    int counter_a = 0;
+    int counter_a1 = 0;
+    int counter_a2 = 0;
+    int counter_b = 0;
+    int counter_b1 = 0;
+    int counter_c = 0;
     std::vector<int> log;
 
     nx::test_registry reg;
@@ -107,67 +106,67 @@ TEST("test sections - canonical preorder + counts on a richer tree")
         "testMultiLevel", {},
         [&]
         {
-            counterRoot++;
+            counter_root++;
 
             SECTION("A")
             {
-                counterA++;
+                counter_a++;
                 log.push_back(1);
 
                 SECTION("A1")
                 {
-                    counterA1++;
+                    counter_a1++;
                     log.push_back(2);
-                    CHECK(true);
+                    SUCCEED();
                 }
 
                 SECTION("A2")
                 {
-                    counterA2++;
+                    counter_a2++;
                     log.push_back(3);
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
 
             SECTION("B")
             {
-                counterB++;
+                counter_b++;
                 log.push_back(4);
 
                 SECTION("B1")
                 {
-                    counterB1++;
+                    counter_b1++;
                     log.push_back(5);
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
 
             SECTION("C")
             {
-                counterC++;
+                counter_c++;
                 log.push_back(6);
-                CHECK(true);
+                SUCCEED();
             }
         });
 
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterRoot == 4);
-    CHECK(counterA == 2);
-    CHECK(counterA1 == 1);
-    CHECK(counterA2 == 1);
-    CHECK(counterB == 1);
-    CHECK(counterB1 == 1);
-    CHECK(counterC == 1);
+    CHECK(counter_root == 4);
+    CHECK(counter_a == 2);
+    CHECK(counter_a1 == 1);
+    CHECK(counter_a2 == 1);
+    CHECK(counter_b == 1);
+    CHECK(counter_b1 == 1);
+    CHECK(counter_c == 1);
 
     // Each run executes from root to leaf, so log is interleaved:
     // Run 1: root -> A -> A1: logs 1, 2
     // Run 2: root -> A -> A2: logs 1, 3
     // Run 3: root -> B -> B1: logs 4, 5
     // Run 4: root -> C: logs 6
-    auto const expectedLog = std::vector<int>{1, 2, 1, 3, 4, 5, 6};
-    CHECK(log == expectedLog);
+    auto const expected_log = std::vector<int>{1, 2, 1, 3, 4, 5, 6};
+    CHECK(log == expected_log);
 
     CHECK(exec.count_total_tests() == 1);
     CHECK(exec.count_total_checks() == 4);
@@ -177,8 +176,8 @@ TEST("test sections - canonical preorder + counts on a richer tree")
 
 TEST("test sections - distinct dynamic sections in a loop, preorder stable")
 {
-    int N = 4;
-    int counterRoot = 0;
+    int n = 4;
+    int counter_root = 0;
     std::vector<int> log;
 
     nx::test_registry reg;
@@ -186,14 +185,14 @@ TEST("test sections - distinct dynamic sections in a loop, preorder stable")
         "testDynamicLoop", {},
         [&]
         {
-            counterRoot++;
+            counter_root++;
 
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i < n; ++i)
             {
                 SECTION("item {}", i)
                 {
                     log.push_back(i);
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
         });
@@ -201,21 +200,21 @@ TEST("test sections - distinct dynamic sections in a loop, preorder stable")
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterRoot == N);
+    CHECK(counter_root == n);
 
-    auto const expectedLog = std::vector<int>{0, 1, 2, 3};
-    CHECK(log == expectedLog);
+    auto const expected_log = std::vector<int>{0, 1, 2, 3};
+    CHECK(log == expected_log);
 
     CHECK(exec.count_total_tests() == 1);
-    CHECK(exec.count_total_checks() == N);
+    CHECK(exec.count_total_checks() == n);
     CHECK(exec.count_failed_tests() == 0);
     CHECK(exec.count_failed_checks() == 0);
 }
 
 TEST("test sections - dynamic loop with nested subsections, preorder and counts")
 {
-    int N = 3;
-    int counterRoot = 0;
+    int n = 3;
+    int counter_root = 0;
     std::vector<std::pair<int, std::string>> log;
 
     nx::test_registry reg;
@@ -223,22 +222,22 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
         "testDynamicNested", {},
         [&]
         {
-            counterRoot++;
+            counter_root++;
 
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i < n; ++i)
             {
                 SECTION("i={}", i)
                 {
                     SECTION("even")
                     {
                         log.emplace_back(i, "even");
-                        CHECK(true);
+                        SUCCEED();
                     }
 
                     SECTION("odd")
                     {
                         log.emplace_back(i, "odd");
-                        CHECK(true);
+                        SUCCEED();
                     }
                 }
             }
@@ -247,7 +246,7 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterRoot == 2 * N);
+    CHECK(counter_root == 2 * n);
 
     // Each run executes from root through parent section to leaf:
     // Run for i=0/even, then i=0/odd, then i=1/even, then i=1/odd, etc.
@@ -257,14 +256,14 @@ TEST("test sections - dynamic loop with nested subsections, preorder and counts"
     CHECK(log == expected);
 
     CHECK(exec.count_total_tests() == 1);
-    CHECK(exec.count_total_checks() == 2 * N);
+    CHECK(exec.count_total_checks() == 2 * n);
     CHECK(exec.count_failed_tests() == 0);
     CHECK(exec.count_failed_checks() == 0);
 }
 
 TEST("test sections - conditionally active subsections across runs (all reachable)")
 {
-    int counterRoot = 0;
+    int counter_root = 0;
     std::vector<std::string> log;
 
     nx::test_registry reg;
@@ -272,7 +271,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
         "testConditional", {},
         [&, phase = 0]() mutable
         {
-            counterRoot++;
+            counter_root++;
 
             SECTION("outer")
             {
@@ -282,7 +281,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
                     {
                         log.emplace_back("first");
                         phase = 1;
-                        CHECK(true);
+                        SUCCEED();
                     }
                 }
                 else
@@ -290,7 +289,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
                     SECTION("second")
                     {
                         log.emplace_back("second");
-                        CHECK(true);
+                        SUCCEED();
                     }
                 }
 
@@ -299,7 +298,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
                 SECTION("third")
                 {
                     log.emplace_back("third");
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
         });
@@ -307,7 +306,7 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterRoot == 3);
+    CHECK(counter_root == 3);
 
     auto const expected = std::vector<std::string>{
         "first",
@@ -324,9 +323,9 @@ TEST("test sections - conditionally active subsections across runs (all reachabl
 
 TEST("test sections - discovered-but-vanishing subsection => failure but no infinite loop")
 {
-    int visitsOuter = 0;
-    int visitsOnce = 0;
-    int visitsVanish = 0;
+    int visits_outer = 0;
+    int visits_once = 0;
+    int visits_vanish = 0;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -335,21 +334,21 @@ TEST("test sections - discovered-but-vanishing subsection => failure but no infi
         {
             SECTION("outer")
             {
-                ++visitsOuter;
+                ++visits_outer;
 
                 if (!flag)
                 {
                     SECTION("once")
                     {
-                        ++visitsOnce;
+                        ++visits_once;
                         flag = true;
-                        CHECK(true);
+                        SUCCEED();
                     }
 
                     SECTION("vanish")
                     {
-                        ++visitsVanish;
-                        CHECK(true);
+                        ++visits_vanish;
+                        SUCCEED();
                     }
                 }
             }
@@ -358,9 +357,9 @@ TEST("test sections - discovered-but-vanishing subsection => failure but no infi
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(visitsOuter == 2);
-    CHECK(visitsOnce == 1);
-    CHECK(visitsVanish == 0);
+    CHECK(visits_outer == 2);
+    CHECK(visits_once == 1);
+    CHECK(visits_vanish == 0);
 
     CHECK(exec.count_failed_tests() == 1);
 }
@@ -380,13 +379,13 @@ TEST("test sections - duplicate sibling section names => immediate error")
                 SECTION("dup")
                 {
                     ++first;
-                    CHECK(true);
+                    SUCCEED();
                 }
 
                 SECTION("dup")
                 {
                     ++second;
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
         });
@@ -421,7 +420,7 @@ TEST("test sections - failure in one leaf still allows siblings to run")
                 SECTION("B")
                 {
                     log.emplace_back("B");
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
         });
@@ -458,7 +457,7 @@ TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
                 SECTION("ok")
                 {
                     log.emplace_back("ok_enter");
-                    CHECK(true);
+                    SUCCEED();
                 }
             }
         });
@@ -477,8 +476,8 @@ TEST("test sections - exception inside one leaf doesn't corrupt scheduling")
 
 TEST("test sections - early-abort-style macro (REQUIRE) terminates path but not schedule")
 {
-    int afterRequire = 0;
-    int visitedOk = 0;
+    int after_require = 0;
+    int visited_ok = 0;
 
     nx::test_registry reg;
     reg.add_declaration( //
@@ -490,13 +489,13 @@ TEST("test sections - early-abort-style macro (REQUIRE) terminates path but not 
                 SECTION("fatal")
                 {
                     REQUIRE(false);
-                    ++afterRequire;
+                    ++after_require;
                 }
 
                 SECTION("ok")
                 {
-                    ++visitedOk;
-                    CHECK(true);
+                    ++visited_ok;
+                    SUCCEED();
                 }
             }
         });
@@ -504,16 +503,16 @@ TEST("test sections - early-abort-style macro (REQUIRE) terminates path but not 
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(afterRequire == 0);
-    CHECK(visitedOk == 0); // NOTE: for now, siblings might be visited
+    CHECK(after_require == 0);
+    CHECK(visited_ok == 0); // NOTE: for now, siblings might be visited
 
     CHECK(exec.count_failed_tests() == 1);
 }
 
 TEST("test sections - nested conditionals with subsections active at different times")
 {
-    int N = 2;
-    int counterRoot = 0;
+    int n = 2;
+    int counter_root = 0;
     std::vector<std::string> log;
 
     nx::test_registry reg;
@@ -521,9 +520,9 @@ TEST("test sections - nested conditionals with subsections active at different t
         "testNestedConditional", {},
         [&]
         {
-            counterRoot++;
+            counter_root++;
 
-            for (int i = 0; i < N; ++i)
+            for (int i = 0; i < n; ++i)
             {
                 SECTION("i={}", i)
                 {
@@ -532,7 +531,7 @@ TEST("test sections - nested conditionals with subsections active at different t
                         SECTION("X")
                         {
                             log.emplace_back("i0/X");
-                            CHECK(true);
+                            SUCCEED();
                         }
                     }
                     else
@@ -540,7 +539,7 @@ TEST("test sections - nested conditionals with subsections active at different t
                         SECTION("Y")
                         {
                             log.emplace_back("i1/Y");
-                            CHECK(true);
+                            SUCCEED();
                         }
                     }
                 }
@@ -550,7 +549,7 @@ TEST("test sections - nested conditionals with subsections active at different t
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
 
-    CHECK(counterRoot == 2);
+    CHECK(counter_root == 2);
 
     auto const expected = std::vector<std::string>{
         "i0/X",
@@ -562,4 +561,92 @@ TEST("test sections - nested conditionals with subsections active at different t
     CHECK(exec.count_total_checks() == 2);
     CHECK(exec.count_failed_tests() == 0);
     CHECK(exec.count_failed_checks() == 0);
+}
+
+TEST("test sections - leaf sections with no checks are considered failing")
+{
+    int visited_empty_leaf = 0;
+    int visited_valid_leaf = 0;
+
+    nx::test_registry reg;
+    reg.add_declaration( //
+        "testNoChecks", {},
+        [&]
+        {
+            SECTION("parent")
+            {
+                SECTION("empty leaf")
+                {
+                    ++visited_empty_leaf;
+                    // No CHECK or REQUIRE calls here - should cause failure
+                }
+
+                SECTION("valid leaf")
+                {
+                    ++visited_valid_leaf;
+                    SUCCEED();
+                }
+            }
+        });
+
+    auto schedule = nx::test_schedule::create({}, reg);
+    auto exec = nx::execute_tests(schedule, {});
+
+    CHECK(visited_empty_leaf == 1);
+    CHECK(visited_valid_leaf == 1);
+
+    // The test should be considered failed because one leaf section has no checks
+    CHECK(exec.count_failed_tests() == 1);
+    CHECK(exec.count_total_checks() == 1);
+}
+
+TEST("test sections - CC_ASSERT_ALWAYS failure in root after subsections executes on all paths")
+{
+    int visited_a = 0;
+    int visited_b = 0;
+    int after_subsections = 0;
+
+    nx::test_registry reg;
+    reg.add_declaration( //
+        "testAssertAlwaysInRoot", {},
+        [&]
+        {
+            SECTION("parent")
+            {
+                SECTION("A")
+                {
+                    ++visited_a;
+                    SUCCEED();
+                }
+
+                SECTION("B")
+                {
+                    ++visited_b;
+                    SUCCEED();
+                }
+
+                // This is in the root section (parent) but after the subsections
+                // It should execute twice - once during the run for section A, and once for section B
+                ++after_subsections;
+                CC_ASSERT_ALWAYS(false, "deliberate assert failure after subsections");
+            }
+        });
+
+    auto schedule = nx::test_schedule::create({}, reg);
+    auto exec = nx::execute_tests(schedule, {});
+
+    // Both subsections should be visited exactly once
+    CHECK(visited_a == 1);
+    CHECK(visited_b == 1);
+
+    // The assert failure should have been hit twice (once per subsection path)
+    CHECK(after_subsections == 2);
+
+    // Both checks should have been executed successfully
+    // (assertion failures count as failed checks)
+    CHECK(exec.count_total_checks() == 4);
+    CHECK(exec.count_failed_checks() == 2);
+
+    // But the test overall should be marked as failed due to the CC_ASSERT_ALWAYS failures
+    CHECK(exec.count_failed_tests() == 1);
 }

@@ -60,3 +60,27 @@ nx::impl::check_handle nx::impl::check_handle::note(cc::string msg) &&
     // MIGRATE ME
     return std::move(*this).add_extra_line(std::format("note: {}", msg.c_str_materialize()));
 }
+
+nx::impl::check_handle nx::impl::check_handle::fail_note() &&
+{
+    // MIGRATE ME
+    return std::move(*this).add_extra_line("note: test failed");
+}
+
+nx::impl::check_handle nx::impl::check_handle::fail_note(cc::string msg) &&
+{
+    // MIGRATE ME
+    return std::move(*this).add_extra_line(std::format("note: {}", msg.c_str_materialize()));
+}
+
+nx::impl::check_handle nx::impl::check_handle::succeed_note() &&
+{
+    // MIGRATE ME
+    return std::move(*this).add_extra_line("note: test succeeded");
+}
+
+nx::impl::check_handle nx::impl::check_handle::succeed_note(cc::string msg) &&
+{
+    // MIGRATE ME
+    return std::move(*this).add_extra_line(std::format("note: {}", msg.c_str_materialize()));
+}

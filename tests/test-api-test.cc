@@ -2,7 +2,7 @@
 
 TEST("test api - basic checks")
 {
-    CHECK(true);
+    SUCCEED();
     CHECK(1 < 2);
     CHECK(1 <= 2);
     CHECK(1 + 2 == 3);

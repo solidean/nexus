@@ -131,6 +131,11 @@ struct check_handle final
     check_handle context(cc::string msg) &&;
     check_handle note(cc::string msg) &&;
 
+    check_handle fail_note() &&;
+    check_handle fail_note(cc::string msg) &&;
+    check_handle succeed_note() &&;
+    check_handle succeed_note(cc::string msg) &&;
+
     template <class T>
     check_handle dump(cc::string_view label, T const& value) &&
     {
@@ -168,18 +173,58 @@ check_handle make_check_handle(check_kind kind, char const* expr_text, lhs_holde
 {
     static_assert(requires(T const& v) { bool(v); }, "type must be castable to bool in CHECK/REQUIRE(v)");
 
-    return check_handle::make(kind, cmp_op::none, expr_text, bool(expr.lhs), loc) //
-        .dump(expr.lhs);
+    return check_handle::make(kind, cmp_op::none, expr_text, bool(expr.lhs), loc);
 }
 
 } // namespace nx::impl
 
-// CHECK macro
+// CHECK macro: soft assertion that continues test execution on failure
+// Supports boolean expressions and comparisons, preserving lhs/rhs values for diagnostics
+// Returns check_handle that can be chained with .note(), .context(), .dump(), etc.
+//
+// Examples:
+//   CHECK(ptr != nullptr);
+//   CHECK(value == 42);
+//   CHECK(a < b).context("comparing sizes");
+//   CHECK(result).note("expected truthy result").dump("result", result);
 #define CHECK(Expr)                                                                                      \
     ::nx::impl::make_check_handle(::nx::impl::check_kind::check, #Expr, ::nx::impl::lhs_grab{} <=> Expr, \
                                   std::source_location::current())
 
-// REQUIRE macro
+// REQUIRE macro: hard assertion that stops test execution on failure
+// Supports boolean expressions and comparisons, preserving lhs/rhs values for diagnostics
+// Returns check_handle that can be chained with .note(), .context(), .dump(), etc.
+//
+// Examples:
+//   REQUIRE(file.is_open());
+//   REQUIRE(count > 0);
+//   REQUIRE(ptr != nullptr).context("initialization phase");
 #define REQUIRE(Expr)                                                                                      \
     ::nx::impl::make_check_handle(::nx::impl::check_kind::require, #Expr, ::nx::impl::lhs_grab{} <=> Expr, \
                                   std::source_location::current())
+
+// FAIL macro: unconditional hard failure (like REQUIRE(false))
+// Optionally takes a message argument
+// Returns check_handle that can be chained with other helper functions
+//
+// Examples:
+//   FAIL();                              // fails with default note
+//   FAIL("unexpected code path");        // fails with custom message
+//   FAIL("invalid state").context("cleanup phase");
+#define FAIL(...)                                                                                            \
+    ::nx::impl::check_handle::make(::nx::impl::check_kind::require, ::nx::impl::cmp_op::none, "FAIL", false, \
+                                   std::source_location::current())                                          \
+        .fail_note(__VA_ARGS__)
+
+// SUCCEED macro: unconditional soft success (like CHECK(true))
+// Optionally takes a message argument
+// Returns check_handle that can be chained with other helper functions
+//
+// Examples:
+//   SUCCEED();                           // succeeds with default note
+//   SUCCEED("reached milestone");        // succeeds with custom message
+//   SUCCEED("validation passed").dump("data", validated_data);
+#define SUCCEED(...)                                                                                         \
+    ::nx::impl::check_handle::make(::nx::impl::check_kind::check, ::nx::impl::cmp_op::none, "SUCCEED", true, \
+                                   std::source_location::current())                                          \
+        .succeed_note(__VA_ARGS__)

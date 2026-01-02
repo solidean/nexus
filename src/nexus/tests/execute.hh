@@ -18,20 +18,37 @@ namespace nx
 {
 struct test_error
 {
-    std::string expr;
+    std::string expr; // usually not shown in editor (assumed to be part of source already)
     std::source_location location;
     std::vector<std::string> extra_lines;
-    std::string expanded;
+    std::string expanded; // shown inline next to the code at location (important for VSCode DX)
+    // NOTE: if expr == expanded, C++ TestMate just shows "failed" instead of anything useful, so make sure they are always different
 };
 
 struct test_execution
 {
     test_instance instance;
-    int executed_checks = 0;
-    int failed_checks = 0;
-    int failed_assertions = 0;
-    std::vector<test_error> errors;
-    double duration_seconds = 0.0;
+
+    struct section
+    {
+        std::string name;
+        std::source_location location;
+        std::vector<section> subsections;
+
+        // NOTE: only valid for leaf sections
+        std::vector<test_error> errors;
+
+        // stats
+        int executed_checks = 0;
+        int failed_checks = 0;
+        double duration_seconds = 0.0;
+
+        // result
+        bool is_considered_failing = false;
+    };
+
+    // note: global stats == root stats
+    section root;
 
     [[nodiscard]] bool is_considered_failing() const;
 };
@@ -52,5 +69,10 @@ test_schedule_execution execute_tests(test_schedule const& schedule, test_schedu
 
 namespace nx::impl
 {
-void report_check_result(check_kind kind, cmp_op op, std::string expr, bool passed, std::vector<std::string> extra_lines, std::source_location location);
+void report_check_result(check_kind kind,
+                         cmp_op op,
+                         std::string expr,
+                         bool passed,
+                         std::vector<std::string> extra_lines,
+                         std::source_location location);
 }

@@ -62,6 +62,60 @@ void print_catch2_xml_discovery(nx::test_registry const& registry)
     std::cout << "</MatchingTests>\n";
 }
 
+void print_section_expressions(nx::test_execution::section const& sec,
+                               std::string const& indent,
+                               int& error_count,
+                               int max_errors)
+{
+    // Print errors/expressions for this section
+    for (auto const& error : sec.errors)
+    {
+        if (error_count >= max_errors)
+            return;
+
+        std::cout << indent << "<Expression success=\"false\" ";
+        std::cout << "filename=\"" << xml_escape(error.location.file_name()) << "\" ";
+        std::cout << "line=\"" << error.location.line() << "\">\n";
+        std::cout << indent << "  <Original>" << xml_escape(error.expr) << "</Original>\n";
+        std::cout << indent << "  <Expanded>" << xml_escape(error.expanded) << "</Expanded>\n";
+        std::cout << indent << "</Expression>\n";
+
+        ++error_count;
+    }
+}
+
+void print_section_recursive(nx::test_execution::section const& sec,
+                             std::string const& indent,
+                             int& error_count,
+                             int max_errors)
+{
+    // Print expressions for this section (top-level section errors appear before subsections)
+    print_section_expressions(sec, indent, error_count, max_errors);
+
+    // Print subsections
+    for (auto const& subsec : sec.subsections)
+    {
+        std::cout << indent << "<Section name=\"" << xml_escape(subsec.name) << "\" ";
+        std::cout << "filename=\"" << xml_escape(subsec.location.file_name()) << "\" ";
+        std::cout << "line=\"" << subsec.location.line() << "\">\n";
+
+        // Recursively print subsection content
+        print_section_recursive(subsec, indent + "  ", error_count, max_errors);
+
+        // Print section summary
+        // If the section is considered failing but has 0 failed checks (e.g., missing CHECK),
+        // report at least 1 failure so C++ TestMate interprets it correctly
+        auto const failures = subsec.is_considered_failing ? std::max(subsec.failed_checks, 1) : subsec.failed_checks;
+        std::cout << indent << "  <OverallResults ";
+        std::cout << "successes=\"" << (subsec.executed_checks - subsec.failed_checks) << "\" ";
+        std::cout << "failures=\"" << failures << "\" ";
+        std::cout << "expectedFailures=\"0\" ";
+        std::cout << "durationInSeconds=\"" << subsec.duration_seconds << "\"/>\n";
+
+        std::cout << indent << "</Section>\n";
+    }
+}
+
 void print_catch2_execute_result(nx::test_schedule_execution const& execution)
 {
     std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
@@ -77,29 +131,14 @@ void print_catch2_execute_result(nx::test_schedule_execution const& execution)
         std::cout << "filename=\"" << xml_escape(decl.location.file_name()) << "\" ";
         std::cout << "line=\"" << decl.location.line() << "\">\n";
 
-        // If test failed, add error expressions (capped)
-        if (!success)
-        {
-            int const max_errors = 50;
-            int error_count = 0;
-            for (auto const& error : exec.errors)
-            {
-                if (error_count >= max_errors)
-                    break;
+        // Print all sections and expressions recursively (capped at max_errors)
+        int const max_errors = 50;
+        int error_count = 0;
+        print_section_recursive(exec.root, "    ", error_count, max_errors);
 
-                std::cout << "    <Expression success=\"false\" ";
-                std::cout << "filename=\"" << xml_escape(error.location.file_name()) << "\" ";
-                std::cout << "line=\"" << error.location.line() << "\">\n";
-                std::cout << "      <Original>" << xml_escape(error.expr) << "</Original>\n";
-                std::cout << "      <Expanded>" << xml_escape(error.expanded) << "</Expanded>\n";
-                std::cout << "    </Expression>\n";
-
-                ++error_count;
-            }
-        }
-
+        // Print test case summary
         std::cout << "    <OverallResult success=\"" << (success ? "true" : "false") << "\" ";
-        std::cout << "durationInSeconds=\"" << exec.duration_seconds << "\"/>\n";
+        std::cout << "durationInSeconds=\"" << exec.root.duration_seconds << "\"/>\n";
         std::cout << "  </TestCase>\n";
     }
 

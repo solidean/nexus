@@ -115,6 +115,30 @@ TEST("test registry - REQUIRE aborts test on failure")
     CHECK(exec.count_failed_checks() == 1); // REQUIRE counts as a check
 }
 
+TEST("test registry - CC_ASSERT_ALWAYS aborts test on failure")
+{
+    nx::test_registry reg;
+
+    int counter = 0;
+    reg.add_declaration("assert_always_aborts", {},
+                        [&counter]
+                        {
+                            CC_ASSERT_ALWAYS(false, "assertion failed"); // should fail & abort
+                            ++counter;                                   // must NOT run
+                            CHECK(false);                                // must NOT run
+                        });
+
+    auto schedule = nx::test_schedule::create({}, reg);
+    auto exec = nx::execute_tests(schedule, {});
+
+    // Verify abort happened
+    CHECK(counter == 0);
+
+    // Check counts - the test should be marked as failed
+    CHECK(exec.count_total_tests() == 1);
+    CHECK(exec.count_failed_tests() == 1);
+}
+
 TEST("test registry - disabled tests are not executed")
 {
     nx::test_registry reg;
@@ -126,7 +150,7 @@ TEST("test registry - disabled tests are not executed")
                         [&counter]
                         {
                             ++counter;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     // Disabled test - body should never run
@@ -194,11 +218,11 @@ TEST("test registry - seed configuration is stored")
     nx::test_registry reg;
 
     // Tests with different seed values
-    reg.add_declaration("T_seed_42_a", nx::config::cfg{.enabled = true, .seed = 42}, [] { CHECK(true); });
+    reg.add_declaration("T_seed_42_a", nx::config::cfg{.enabled = true, .seed = 42}, [] { SUCCEED(); });
 
-    reg.add_declaration("T_seed_42_b", nx::config::cfg{.enabled = true, .seed = 42}, [] { CHECK(true); });
+    reg.add_declaration("T_seed_42_b", nx::config::cfg{.enabled = true, .seed = 42}, [] { SUCCEED(); });
 
-    reg.add_declaration("T_seed_13", nx::config::cfg{.enabled = true, .seed = 13}, [] { CHECK(true); });
+    reg.add_declaration("T_seed_13", nx::config::cfg{.enabled = true, .seed = 13}, [] { SUCCEED(); });
 
     auto schedule = nx::test_schedule::create({}, reg);
     auto exec = nx::execute_tests(schedule, {});
@@ -218,13 +242,13 @@ TEST("test registry - uncaught exceptions become failing tests")
     nx::test_registry reg;
 
     // Normal test
-    reg.add_declaration("T_normal", {}, [] { CHECK(true); });
+    reg.add_declaration("T_normal", {}, [] { SUCCEED(); });
 
     // Test that throws after a CHECK
     reg.add_declaration("T_throw", {},
                         []
                         {
-                            CHECK(true); // this passes
+                            SUCCEED(); // this passes
                             throw std::runtime_error("test exception");
                         });
 
@@ -272,14 +296,14 @@ TEST("test registry - duplicate test names are both registered")
                         [&counter_a]
                         {
                             ++counter_a;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     reg.add_declaration("duplicate_name", {},
                         [&counter_b]
                         {
                             ++counter_b;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
@@ -313,7 +337,7 @@ TEST("test registry - test with zero checks is counted as a test")
                         [&counter_check]
                         {
                             ++counter_check;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     auto schedule = nx::test_schedule::create({}, reg);
@@ -341,14 +365,14 @@ TEST("test registry - schedule integration with run_disabled_tests config")
                         [&counter_enabled]
                         {
                             ++counter_enabled;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     reg.add_declaration("T_disabled", {.enabled = false},
                         [&counter_disabled]
                         {
                             ++counter_disabled;
-                            CHECK(true);
+                            SUCCEED();
                         });
 
     // Schedule without run_disabled_tests
